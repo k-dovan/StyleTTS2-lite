@@ -109,4 +109,8 @@ with gr.Blocks() as app:
     generate_button.click(text_to_speech, inputs=[text_input, gender_select, style_select], outputs=[output_audio])
 
 if __name__ == "__main__":
-    app.launch(server_name="0.0.0.0", server_port=7861, root_path="/tts-demo")
+    app.launch(
+               server_name="0.0.0.0",
+               server_port=7861, 
+               root_path="/tts-demo"
+               )

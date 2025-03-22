@@ -81,7 +81,7 @@ def convert_number_to_words(text: str) -> str:
 def convert_date_to_words(text: str) -> str:
     """Convert full and partial date formats into written Vietnamese words, ensuring correct formatting."""
     
-    def format_vietnamese_date(day, month, year=None):
+    def format_vietnamese_date(day, month, year=None, prefix: str = ''):
         """Helper function to convert numbers to Vietnamese words."""
         day_str = num2words(int(day), lang="vi")
         month_str = "tư" if int(month) == 4 else num2words(int(month), lang="vi")
@@ -91,7 +91,7 @@ def convert_date_to_words(text: str) -> str:
             year_str = re.sub(r"\blẻ\b", "không trăm", year_str)  # Fix 'lẻ' in years
             return f"ngày {day_str} tháng {month_str} năm {year_str}"
         else:  # Handle partial date (DD/MM)
-            return f"ngày {day_str} tháng {month_str}"
+            return f"{prefix} {day_str} tháng {month_str}"
 
     # Convert full dates: DD/MM/YYYY → "ngày hai mươi ba tháng ba năm hai ngàn không trăm hai mươi lăm"
     text = re.sub(
@@ -110,8 +110,8 @@ def convert_date_to_words(text: str) -> str:
     # Convert **partial dates only** (e.g., "ngày 21/3" → "ngày hai mươi mốt tháng ba"),  
     # but **skip full dates with year** (e.g., "ngày 21/3/2025" remains unchanged).
     text = re.sub(
-        r'(?i)\bngày\s*(\d{1,2})/(\d{1,2})\b(?!/\d{4})',
-        lambda m: format_vietnamese_date(m.group(1), m.group(2)),
+        r'(?i)\b(ngày|trước|sau|tới|đến)\s*(\d{1,2})/(\d{1,2})\b(?!/\d{4})',
+        lambda m: format_vietnamese_date(m.group(2), m.group(3), None, m.group(1)),
         text
     )
 
