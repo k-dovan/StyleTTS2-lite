@@ -3,3 +3,4 @@ venv/
 .cache/
 model/
 out/
+*.log
