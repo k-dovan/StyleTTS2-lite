@@ -23,8 +23,8 @@ def load_model():
     xtts_model = Xtts.init_from_config(config)
     xtts_model.load_checkpoint(config, checkpoint_dir=MODEL_DIR)
     xtts_model.eval()
-    # if torch.cuda.is_available():
-    #     xtts_model.cuda()
+    if torch.cuda.is_available():
+        xtts_model.cuda()
     print("✅ Mô hình XTTS đã tải thành công!")
     return xtts_model
 
