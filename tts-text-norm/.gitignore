@@ -1,0 +1,15 @@
+.idea
+.env
+.vscode
+.venv
+__pycache__
+# folder data & checkpoint 
+data/
+logs/
+exps/
+
+# temp file
+testing_lib*.py
+p2p_project
+extract*
+testing_lib*.py
