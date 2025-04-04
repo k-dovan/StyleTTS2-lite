@@ -165,9 +165,9 @@ class RegrexNormalize:
 
         return text
 
-    def meansure(text: str) -> str:
-        """Normalize meansure via regex"""
-        for reg in constants.MeansureRegular.REGREX_TYPE_1:
+    def measure(text: str) -> str:
+        """Normalize measure via regex"""
+        for reg in constants.MeasureRegular.REGREX_TYPE_1:
             for match in re.compile(reg).finditer(text):
                 temp = match.groups()
                 mtxt = f" {NumberReader.number(temp[0], is_decimal=True)} "
@@ -177,7 +177,7 @@ class RegrexNormalize:
                 mtxt += f"{temp[3]} "
                 text = text.replace(match.group(), mtxt)
 
-        for reg in constants.MeansureRegular.REGREX_TYPE_2:
+        for reg in constants.MeasureRegular.REGREX_TYPE_2:
             for match in re.compile(reg).finditer(text):
                 temp = match.groups()
                 if len(temp) == 5:
@@ -233,6 +233,19 @@ class RegrexNormalize:
                 text = text.replace(match.group(), mtxt)
 
         return text
+    
+    @staticmethod
+    def revert_currency(text: str) -> str:
+        """Normalize reverted currency via regex"""
+        for reg in constants.RevertCurrencyRegular.REGREX:
+            for match in re.compile(reg).finditer(text):
+                currency = match['currency']
+                amount = match['amount']
+                
+                mtxt = f" {NumberReader.number(amount, is_decimal=True)} {constants.CurrencyCharset.READER[currency]} "
+                text = text.replace(match.group(), mtxt)
+
+        return text
 
 
 def normalize(text: str) -> str:
@@ -242,9 +255,10 @@ def normalize(text: str) -> str:
     text = RegrexNormalize.time(text)
     text = RegrexNormalize.score(text)
     text = RegrexNormalize.location(text)
-    text = RegrexNormalize.meansure(text)
+    text = RegrexNormalize.measure(text)
     text = RegrexNormalize.roman(text)
     text = RegrexNormalize.phone(text)
     text = RegrexNormalize.continuous(text)
+    text = RegrexNormalize.revert_currency(text)
 
     return text

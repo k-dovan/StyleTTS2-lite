@@ -1,5 +1,5 @@
-from constants.charset import PunctuationCharset, SymbolCharset
-
+from constants.charset import PunctuationCharset, SymbolCharset, CurrencyCharset
+import re
 
 class EmailRegular:
     EMAIL_FORMULA = r"[a-z][a-z0-9_\.]{5,32}@[a-z0-9]{2,}(\.[a-z0-9]{2,4})+"
@@ -90,7 +90,7 @@ class LocationRegular:
     ]
 
 
-class MeansureRegular:
+class MeasureRegular:
     REGREX_TYPE_1 = [
         r"(?i)\b(\d+(?:\.\d{3})+(?:,\d+)?)\s?([°|A-Za-z]+[2|3]?)(?:\/([A-Za-z]+[2|3]?))?(?:\b|$)(\s?-?)",
         r"(?i)\b(\d+(?:,\d{3})+(?:\.\d+)?)\s?([°|A-Za-z]+[2|3]?)(?:\/(A-Za-z+[2|3]?))?(?:\b|$)(\s?-?)",
@@ -126,4 +126,11 @@ class ContinuosRegular:
         r"(?i)\b\d+(\.\d+)\s?(\-)\s?\d+(\.\d+)?",
         r"(?i)\b\d+(\,\d+)\s?(\-)\s?\d+(\,\d+)?",
         r"(?i)\b\d\s?(\-)\s?\d+",
+    ]
+    
+class RevertCurrencyRegular:
+    AMOUNT = r"\d+([.,]\d+)*"
+    CURRENCY= "|".join(list(map(re.escape, CurrencyCharset.CURRENCY)))    
+    REGREX = [
+        rf"(?P<currency>{CURRENCY})\s*(?P<amount>{AMOUNT})"
     ]

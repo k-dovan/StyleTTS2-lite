@@ -97,7 +97,7 @@ class TextNormalizer:
                     explained_word = ""
                 elif len(word) > 1:
                     explained_word = ","
-                elif word in constants.PunctuationCharset.SILENT:
+                elif word in constants.PunctuationCharset.DURATION:
                     explained_word = "," if idx != len(in_txts) - 1 else "."
                 else:
                     explained_word = (
@@ -157,8 +157,8 @@ class TextNormalizer:
                 explained_word = self.normalize(word.replace(".", " chấm "))[0]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
-            elif word in constants.CurrencyCharset.CURRENCY:
-                explained_word = constants.CurrencyCharset.READER[word]
+            elif word.upper() in constants.CurrencyCharset.CURRENCY:
+                explained_word = constants.CurrencyCharset.READER[word.upper()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (currency) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif is_short_name(word):
@@ -196,11 +196,11 @@ class TextNormalizer:
                     )
                 # print(f"\t** {display_colors.YELLOW} đọc định dạng số còn sót {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
-            elif "/" in word:
-                if word in constants.UnitCharset.UNIT:
-                    explained_word = constants.UnitCharset.READER[word]
-                else:
-                    explained_word = self.normalize(word.replace("/", " / "))[0]
+            elif word in constants.UnitCharset.UNIT:
+                explained_word = constants.UnitCharset.READER[word]                
+                out_txts.append(explained_word)
+            elif "/" in word:                
+                explained_word = self.normalize(word.replace("/", " / "))[0]                    
                 out_txts.append(explained_word)
             # Xử lý với từ định dạng [UPPER]
             elif word.isupper():
@@ -274,7 +274,7 @@ class TextNormalizer:
                     spitted_word = spitted_word.replace(".", "chấm")
                 explained_word = []
                 for _word in spitted_word.split():
-                    if _word.lower() in list_vn_words:
+                    if _word.lower() in constants.VietnameseWord.WORDS:
                         explained_word.append(_word.lower())
                     elif _word in string.punctuation:
                         if all(
