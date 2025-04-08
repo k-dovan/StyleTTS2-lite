@@ -120,6 +120,6 @@ class VietnameseAbbreviation:
         open(os.path.join(PATH, "double.json"), "r", encoding="utf8")
     )
     START_DOUBLE_ABBREVIATION = [x.split("#")[0] for x in DOUBLE_ABBREVIATION]
-    EXCEPTION_ABBREVIATION = list(
-        json.load(open(os.path.join(PATH, "exception.json"), "r", encoding="utf8"))
+    EXCEPTION_ABBREVIATION = json.load(
+        open(os.path.join(PATH, "exception.json"), "r", encoding="utf8")
     )

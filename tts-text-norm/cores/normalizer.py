@@ -126,7 +126,7 @@ class TextNormalizer:
             elif word.lower() in constants.VietnameseMixWord.MIX_WORD:
                 explained_word = self.normalize(
                     constants.VietnameseMixWord.MIX_WORD[word.lower()]
-                )[0]
+                )
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (mix) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif any(ch in word for ch in constants.SymbolCharset.SYMBOL):
@@ -136,7 +136,7 @@ class TextNormalizer:
                 explained_word = " ".join(
                     [
                         (
-                            self.normalize(_word)[0]
+                            self.normalize(_word)
                             if _word not in constants.SymbolCharset.SYMBOL
                             else constants.SymbolCharset.READER[_word]
                         )
@@ -154,7 +154,7 @@ class TextNormalizer:
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.endswith(tuple(constants.VietnameseWebsite.DOMAIN)):
-                explained_word = self.normalize(word.replace(".", " chấm "))[0]
+                explained_word = self.normalize(word.replace(".", " chấm "))
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.upper() in constants.CurrencyCharset.CURRENCY:
@@ -168,16 +168,16 @@ class TextNormalizer:
                 spitted_word = [w for w in word.split(".") if w]
                 explained_word = [constants.VietnameseLocation.READER[spitted_word[0]]]
                 if len(spitted_word) != 1:
-                    explained_word.append(self.normalize(".".join(spitted_word)[1:])[0])
+                    explained_word.append(self.normalize(".".join(spitted_word)[1:]))
                 explained_word = " ".join(explained_word)
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (đia điểm) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
-            elif any(ch.isdigit() for ch in word):
+            elif all(ch.isdigit() for ch in word):
                 explained_word = reader.NumberReader.number(word)
                 out_txts.append(explained_word)
             # Xử lý case missmatch sau khi tokenize
             elif word.endswith("."):
-                explained_word = f"{self.normalize(word[: -1])[0]} ."
+                explained_word = f"{self.normalize(word[: -1])} ."
                 # print(f"\t** {display_colors.YELLOW} đọc định dạng số còn sót {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif "-" in word:
@@ -189,10 +189,10 @@ class TextNormalizer:
                             constants.VietnameseAbbreviation.DOUBLE_ABBREVIATION[_word]
                         )
                     else:
-                        explained_word = self.normalize(_word.replace("#", " "))[0]
+                        explained_word = self.normalize(_word.replace("#", " "))
                 else:
                     explained_word = " ".join(
-                        self.normalize(_word)[0] for _word in word.split("-")
+                        self.normalize(_word) for _word in word.split("-")
                     )
                 # print(f"\t** {display_colors.YELLOW} đọc định dạng số còn sót {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
@@ -200,7 +200,7 @@ class TextNormalizer:
                 explained_word = constants.UnitCharset.READER[word]                
                 out_txts.append(explained_word)
             elif "/" in word:                
-                explained_word = self.normalize(word.replace("/", " / "))[0]                    
+                explained_word = self.normalize(word.replace("/", " / "))                  
                 out_txts.append(explained_word)
             # Xử lý với từ định dạng [UPPER]
             elif word.isupper():
@@ -240,6 +240,10 @@ class TextNormalizer:
                             in_txts[idx + 1 + i] = None
                     else:
                         explained_word = reader.WordReader.upper(word)
+                elif word in constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION:
+                    explained_word = (
+                            constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION[word]
+                        )
                 else:
                     explained_word = reader.WordReader.upper(word)
                 out_txts.append(explained_word)
