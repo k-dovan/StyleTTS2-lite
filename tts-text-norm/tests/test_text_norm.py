@@ -13,7 +13,7 @@ text_normalizer = TextNormalizer("./exps/vncorenlp/")
     ("Bộ GD&ĐT vừa ban hành quy chế thi tốt nghiệp THPT năm 2025.",
      "bộ giáo dục và đào tạo vừa ban hành quy chế thi tốt nghiệp trung học phổ thông năm hai nghìn không trăm hai mươi lăm ."),
     ("Theo WHO, số ca mắc COVID-19 đang có xu hướng giảm.",
-     "theo vê kép hát ô, số ca mắc cô vít mười chín đang có xu hướng giảm ."),
+     "theo vê kép hát ô , số ca mắc cô vít mười chín đang có xu hướng giảm ."),
 ])
 def test_abbreviation_expansion(input_text, expected_output):
     assert ' '.join(text_normalizer(input_text)) == expected_output
