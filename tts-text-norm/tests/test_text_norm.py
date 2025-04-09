@@ -47,7 +47,7 @@ def test_time_expressions(input_text, expected_output):
     ("Giá xăng tăng lên 25.000đ/lít.",
      "giá xăng tăng lên hai mươi lăm nghìn đồng trên lít ."),
     ("Mức lương tối thiểu là 4,680,000 VNĐ.",
-     "mức lương tối thiểu là bốn triệu sáu trăm tám mươi nghìn đồng ."),
+     "mức lương tối thiểu là bốn triệu sáu trăm tám mươi nghìn việt nam đồng ."),
     ("Gói cứu trợ trị giá 2 tỷ đồng.",
      "gói cứu trợ trị giá hai tỷ đồng ."),
 ])
@@ -57,7 +57,7 @@ def test_currency_and_numbers(input_text, expected_output):
 # 📏 Units & Measurements
 @pytest.mark.parametrize("input_text, expected_output", [
     ("Sân bay mới có diện tích 120ha.",
-     "sân bay mới có diện tích một trăm hai mươi hecta ."),
+     "sân bay mới có diện tích một trăm hai mươi héc ta ."),
     ("Trẻ em nên uống 500ml sữa mỗi ngày.",
      "trẻ em nên uống năm trăm mi li lít sữa mỗi ngày ."),
     ("Anh ấy cao 1m75.",
@@ -81,7 +81,7 @@ def test_general_numbers(input_text, expected_output):
 # 🧾 Common News Phrases
 @pytest.mark.parametrize("input_text, expected_output", [
     ("Theo ghi nhận của PV, tình trạng ngập kéo dài.",
-     "theo ghi nhận của phóng viên, tình trạng ngập kéo dài ."),
+     "theo ghi nhận của phóng viên , tình trạng ngập kéo dài ."),
     ("Chính phủ sẽ họp vào đầu tuần tới để đưa ra quyết định.",
      "chính phủ sẽ họp vào đầu tuần tới để đưa ra quyết định ."),
     ("Thủ tướng phát biểu tại lễ khai mạc diễn ra ở Hà Nội.",
@@ -93,9 +93,9 @@ def test_common_phrases(input_text, expected_output):
 # 🌐 Websites & Links
 @pytest.mark.parametrize("input_text, expected_output", [
     ("Độc giả có thể xem thêm tại www.vietnamnews.vn.",
-     "độc giả có thể xem thêm tại www chấm vietnamnews chấm v n ."),
+     "độc giả có thể xem thêm tại www chấm việt nam news chấm vi-en ."),
     ("Tham khảo thêm thông tin qua địa chỉ https://moet.gov.vn.",
-     "tham khảo thêm thông tin qua địa chỉ h t t p s hai chấm gạch gạch moet chấm g o v chấm v n ."),
+     "tham khảo thêm thông tin qua địa chỉ https hai chấm gạch gạch moet chấm gov chấm vi-en ."),
 ])
 def test_web_links(input_text, expected_output):
     assert ' '.join(text_normalizer(input_text)) == expected_output
@@ -103,7 +103,7 @@ def test_web_links(input_text, expected_output):
 # 🧠 Special Characters & Slang
 @pytest.mark.parametrize("input_text, expected_output", [
     ("Tin nóng!!!", "tin nóng ."),
-    ("Khẩn cấp: Cảnh báo mưa lớn.", "khẩn cấp: cảnh báo mưa lớn ."),
+    ("Khẩn cấp: Cảnh báo mưa lớn.", "khẩn cấp , cảnh báo mưa lớn ."),
     ("Giá điện tăng “chóng mặt”.", "giá điện tăng chóng mặt ."),
 ])
 def test_special_characters(input_text, expected_output):
@@ -122,7 +122,7 @@ def test_names_and_locations(input_text, expected_output):
 # 🧪 Mixed Context & Edge Cases
 @pytest.mark.parametrize("input_text, expected_output", [
     ("Thời tiết hôm nay tại TP.HCM: 32°C, độ ẩm 75%.",
-     "thời tiết hôm nay tại thành phố hồ chí minh: ba mươi hai độ c, độ ẩm bảy mươi lăm phần trăm ."),
+     "thời tiết hôm nay tại thành phố hồ chí minh , ba mươi hai độ xê , độ ẩm bảy mươi lăm phần trăm ."),
     ("Ông ấy nặng 75kg và cao 1m80.",
      "ông ấy nặng bảy mươi lăm ki lô gam và cao một mét tám mươi ."),
 ])
@@ -136,11 +136,11 @@ def test_mixed_edge_cases(input_text, expected_output):
     ("Hội nghị sẽ diễn ra vào ngày 20/4. Thời gian bắt đầu lúc 9h sáng.",
      "hội nghị sẽ diễn ra vào ngày hai mươi tháng tư . thời gian bắt đầu lúc chín giờ sáng ."),
     ("Giá vàng hôm nay tăng mạnh. Mức giá hiện tại là 75.000.000đ/lượng.",
-     "giá vàng hôm nay tăng mạnh . mức giá hiện tại là bảy mươi lăm triệu đồng một lượng ."),
+     "giá vàng hôm nay tăng mạnh . mức giá hiện tại là bảy mươi lăm triệu đồng trên lượng ."),
     ("Website www.tuoitre.vn cập nhật tin nhanh. Mời độc giả đón đọc.",
-     "website www chấm tuoitre chấm v n cập nhật tin nhanh . mời độc giả đón đọc ."),
+     "website www chấm tuổi trẻ chấm vi-en cập nhật tin nhanh . mời độc giả đón đọc ."),
     ("Trận đấu bắt đầu lúc 19h30. Dự kiến kết thúc lúc 21h45.",
-     "trận đấu bắt đầu lúc mười chín giờ ba mươi phút . dự kiến kết thúc lúc hai mươi một giờ bốn mươi lăm phút ."),
+     "trận đấu bắt đầu lúc mười chín giờ ba mươi . dự kiến kết thúc lúc hai mươi mốt giờ bốn mươi lăm ."),
     ("Bé nặng 3.5kg khi sinh. Hiện đã được 6 tháng tuổi.",
      "bé nặng ba phẩy năm ki lô gam khi sinh . hiện đã được sáu tháng tuổi ."),
     ("Theo báo cáo, tỷ lệ thất nghiệp là 3.7%. Con số này giảm nhẹ so với quý trước.",
@@ -150,7 +150,7 @@ def test_mixed_edge_cases(input_text, expected_output):
     ("Anh ấy cao 1m80. Cân nặng 80kg.",
      "anh ấy cao một mét tám mươi . cân nặng tám mươi ki lô gam ."),
     ("Nhiệt độ ở Hà Nội là 32°C. Trong khi đó, TP.HCM là 34°C.",
-     "nhiệt độ ở hà nội là ba mươi hai độ c . trong khi đó , thành phố hồ chí minh là ba mươi bốn độ c ."),
+     "nhiệt độ ở hà nội là ba mươi hai độ xê . trong khi đó , thành phố hồ chí minh là ba mươi bốn độ xê ."),
 ])
 def test_multi_sentence_normalization(input_text, expected_output):
     assert ' '.join(text_normalizer(input_text)) == expected_output

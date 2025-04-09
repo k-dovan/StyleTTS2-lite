@@ -150,10 +150,10 @@ class TextNormalizer:
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.lower() in constants.VietnameseWebsite.DOMAIN:
-                explained_word = constants.VietnameseWebsite.READER[word.lower()]
+                explained_word = constants.VietnameseWebsite.DOMAIN[word.lower()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
-            elif word.endswith(tuple(constants.VietnameseWebsite.DOMAIN)):
+            elif word.endswith(tuple(constants.VietnameseWebsite.DOMAIN)) and '.' in word:
                 explained_word = self.normalize(word.replace(".", " chấm "))
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
@@ -172,7 +172,7 @@ class TextNormalizer:
                 explained_word = " ".join(explained_word)
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (đia điểm) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
-            elif all(ch.isdigit() for ch in word):
+            elif all(ch.isdigit() or (ch in ['.',',']) for ch in word):
                 explained_word = reader.NumberReader.number(word)
                 out_txts.append(explained_word)
             # Xử lý case missmatch sau khi tokenize
@@ -247,21 +247,6 @@ class TextNormalizer:
                 else:
                     explained_word = reader.WordReader.upper(word)
                 out_txts.append(explained_word)
-            # Xử lý với tù định dạng [lower] / [Capitalizer]
-            elif word.islower() or (word[0].isupper() and word[1:].islower()):
-                word = word.lower()
-                if (
-                    word == "x"
-                    and 0 < idx < len(in_txts) - 1
-                    and re.match(r"([0-9])", in_txts[idx - 1])
-                    and re.match(r"([0-9])", in_txts[idx + 1])
-                ):
-                    explained_word = "nhân"
-                elif word in constants.VietnameseCharset.DOUBLE_CONSONANTS.split():
-                    explained_word = f"{word.lower()}ờ"
-                else:
-                    explained_word = reader.WordReader.lower(word)
-                out_txts.append(explained_word)
             # Xử lý case mix toàn chữ
             elif all(ch in constants.VietnameseCharset.CHARSETS for ch in word):
                 explained_word = "".join(
@@ -297,7 +282,7 @@ class TextNormalizer:
                 out_txts.append(explained_word)
         out_txts = " ".join(out_txts)
 
-        return re.sub(self._whitespace_re, " ", out_txts).strip()
+        return re.sub(self._whitespace_re, " ", out_txts.lower()).strip()
 
     def __call__(self, itexts: str) -> List[str]:
         otexts = []
@@ -308,6 +293,7 @@ class TextNormalizer:
             for sentence in line:
                 sentence = sentence.replace("T T&T T", "TT&TT")
                 sentence = self.normalize(sentence.replace("_", " "))
-                otexts.append(sentence)
+                if sentence:
+                    otexts.append(sentence)
 
         return otexts

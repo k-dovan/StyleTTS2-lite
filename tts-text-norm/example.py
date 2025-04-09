@@ -18,7 +18,11 @@ TEST_TEXTS = [
     # "hôm nay là 23/03/2025.",
     # "Tôi có 5 con mèo. 100 người tham gia. Trận đấu diễn ra lúc 14:30. Cuộc họp bắt đầu lúc 9:05.",
     # "TP.HCM, ngày 30/04/2025 14:30. Tôi đổi 100 USD sang VNĐ. Giá xăng hôm nay: 22.500 VNĐ/lít. TP.HCM là thành phố lớn.",
-    "5kg gạo. Tôi đổi 100 USD sang VNĐ."
+    # "5kg gạo. Tôi đổi 100 USD sang VNĐ.",
+    # "Theo WHO, số ca mắc COVID-19 đang có xu hướng giảm.",
+    # "Giá xăng tăng lên 25.000đ/lít.",
+    # "Sân bay mới có diện tích 120ha 1.000,50€ 50 - 100%.",
+    "Website www.tuoitre.vn cập nhật tin nhanh. Mời độc giả đón đọc."
 ]
 
 

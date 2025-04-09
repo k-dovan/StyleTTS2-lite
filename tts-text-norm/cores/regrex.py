@@ -15,7 +15,8 @@ class RegrexNormalize:
         # TODO: Implement this function
         for reg in constants.WebsiteRegular.REGREX:
             for match in re.compile(reg).finditer(text):
-                mtxt = f" link đính kèm "
+                mtxt = match.group() \
+                        .replace('://', ' hai chấm gạch gạch ')
                 text = text.replace(match.group(), mtxt)
         return text
 
@@ -164,20 +165,11 @@ class RegrexNormalize:
                 text = text.replace(match.group(), mtxt)
 
         return text
-
-    def measure(text: str) -> str:
-        """Normalize measure via regex"""
-        for reg in constants.MeasureRegular.REGREX_TYPE_1:
-            for match in re.compile(reg).finditer(text):
-                temp = match.groups()
-                mtxt = f" {NumberReader.number(temp[0], is_decimal=True)} "
-                mtxt += f"{constants.VietnameseLocation.LOCATION[temp[1]] if temp[1] in constants.VietnameseLocation.LOCATION else temp[1]} {'trên' if '/' in match.group() else ''}"
-                if temp[2] is not None:
-                    mtxt += f"{constants.VietnameseLocation.LOCATION[temp[2]] if temp[2] in constants.VietnameseLocation.LOCATION else temp[2]} "
-                mtxt += f"{temp[3]} "
-                text = text.replace(match.group(), mtxt)
-
-        for reg in constants.MeasureRegular.REGREX_TYPE_2:
+    
+    @staticmethod
+    def currency(text: str) -> str:        
+        """Normalize currency via regex"""
+        for reg in constants.CurrencyRegular.REGREX:
             for match in re.compile(reg).finditer(text):
                 temp = match.groups()
                 if len(temp) == 5:
@@ -186,15 +178,39 @@ class RegrexNormalize:
                     for word in temp:
                         if word is not None and word[0].isdigit():
                             mtxt.append(NumberReader.number(word, is_decimal=True))
-                        elif word in constants.VietnameseLocation.LOCATION:
-                            mtxt.append(constants.VietnameseLocation.READER[word])
+                        elif word in constants.CurrencyCharset.CURRENCY:
+                            mtxt.append(constants.CurrencyCharset.READER[word])
                         else:
                             mtxt.append(word)
                     mtxt = " ".join([ch for ch in mtxt if ch is not None]).replace(
                         "-", "đến"
                     )
                 else:
-                    mtxt = f" {NumberReader.number(temp[0], is_decimal=True)} {constants.VietnameseLocation.READER[temp[1]] if temp[1] in constants.VietnameseLocation.LOCATION else temp[1]} {temp[2]}"
+                    mtxt = f" {NumberReader.number(temp[0], is_decimal=True)} {constants.CurrencyCharset.READER[temp[1]] if temp[1] in constants.CurrencyCharset.CURRENCY else temp[1]} {temp[2]}"
+                text = text.replace(match.group(), mtxt)
+
+        return text
+    
+    @staticmethod
+    def measure(text: str) -> str:
+        """Normalize measure via regex"""
+        for reg in constants.MeasureRegular.REGREX_01:
+            for match in re.compile(reg).finditer(text):
+                temp = match.groups()
+                mtxt = f" {NumberReader.number(temp[0], is_decimal=True)} "
+                mtxt += f"{constants.UnitCharset.READER[temp[1]] if temp[1] in constants.UnitCharset.UNIT else temp[1]} {'trên' if '/' in match.group() else ''}"
+                if temp[2] is not None:
+                    mtxt += f"{constants.UnitCharset.READER[temp[2]] if temp[2] in constants.UnitCharset.UNIT else temp[2]} "
+                mtxt += f"{temp[3]} "
+                text = text.replace(match.group(), mtxt)
+                
+        for reg in constants.MeasureRegular.REGREX_02:
+            for match in re.compile(reg).finditer(text):
+                temp = match.groups()
+                mtxt = f" {NumberReader.number(temp[0], is_decimal=True)} "
+                mtxt += f"{constants.UnitCharset.READER[temp[1]] if temp[1] in constants.UnitCharset.UNIT else temp[1]} {'trên' if '/' in match.group() else ''}"
+                if temp[2] is not None:
+                    mtxt += f" {NumberReader.number(temp[2], is_decimal=True)} "
                 text = text.replace(match.group(), mtxt)
 
         return text
@@ -255,6 +271,7 @@ def normalize(text: str) -> str:
     text = RegrexNormalize.time(text)
     text = RegrexNormalize.score(text)
     text = RegrexNormalize.location(text)
+    text = RegrexNormalize.currency(text)
     text = RegrexNormalize.measure(text)
     text = RegrexNormalize.roman(text)
     text = RegrexNormalize.phone(text)
