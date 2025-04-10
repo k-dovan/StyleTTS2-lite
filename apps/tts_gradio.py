@@ -9,31 +9,29 @@ from utils.text_processing import process_text_for_tts, split_text_for_inference
 from utils.audio_processing import generate_audio
 
 # Define paths
-MODEL_DIR = "model"
-OUTPUT_DIR = "outputs"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+MODEL_DIR = "apps/model"
 
 # Define available voices with Vietnamese labels
 VOICES = {
     "Nam": {
-        "Điềm đạm": "voices/nam-calm.wav",
-        "Chậm": "voices/nam-cham.wav",
-        "Truyền cảm": "voices/nam-truyen-cam.wav",
-        "Nhanh": "voices/nam-nhanh.wav"
+        "Điềm đạm": "apps/voices/nam-calm.wav",
+        "Chậm": "apps/voices/nam-cham.wav",
+        "Truyền cảm": "apps/voices/nam-truyen-cam.wav",
+        "Nhanh": "apps/voices/nam-nhanh.wav"
     },
     "Nữ": {
-        "Điềm đạm": "voices/nu-calm.wav",
-        "Chậm": "voices/nu-cham.wav",
-        "Lưu loát": "voices/nu-luu-loat.wav",
-        "Nhẹ nhàng": "voices/nu-nhe-nhang.wav",
-        "Nhã nhặn": "voices/nu-nhan-nha.wav"
+        "Điềm đạm": "apps/voices/nu-calm.wav",
+        "Chậm": "apps/voices/nu-cham.wav",
+        "Lưu loát": "apps/voices/nu-luu-loat.wav",
+        "Nhẹ nhàng": "apps/voices/nu-nhe-nhang.wav",
+        "Nhã nhặn": "apps/voices/nu-nhan-nha.wav"
     }
 }
 
 def load_model():
     """Download, load, and initialize the XTTS model."""
-    print("🔄 Đang tải mô hình XTTS...")
-    snapshot_download(repo_id="capleaf/viXTTS", repo_type="model", local_dir=MODEL_DIR)
+    # print("🔄 Đang tải mô hình XTTS...")
+    # snapshot_download(repo_id="capleaf/viXTTS", repo_type="model", local_dir=MODEL_DIR)
     config = XttsConfig()
     config.load_json(os.path.join(MODEL_DIR, "config.json"))
     config.model_config = {"arbitrary_types_allowed": True}

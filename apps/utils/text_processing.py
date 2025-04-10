@@ -4,7 +4,7 @@ import unicodedata
 from num2words import num2words
 
 # Load abbreviations
-with open("utils/abbreviations.json", "r", encoding="utf-8") as f:
+with open("apps/utils/abbreviations.json", "r", encoding="utf-8") as f:
     ABBREVIATIONS = json.load(f)
 
 def normalize_text(text: str) -> str:
@@ -166,20 +166,3 @@ def process_text_for_tts(text: str) -> str:
     
     return text
 
-def split_text_for_inference(text: str, max_length=250) -> list:
-    """Splits text into chunks based on sentence boundaries to fit within model constraints."""
-    sentences = re.split(r'(?<=[.!?])\s+', text)  # Split by sentence endings
-    chunks, current_chunk = [], ""
-    
-    for sentence in sentences:
-        if len(current_chunk) + len(sentence) <= max_length:
-            current_chunk += sentence + " "
-        else:
-            chunks.append(current_chunk.strip())
-            current_chunk = sentence + " "
-    
-    if current_chunk:
-        chunks.append(current_chunk.strip())
-
-    print(f"[DEBUG] Split into {len(chunks)} Text Chunks: {chunks}")
-    return [chunk for chunk in chunks if len(chunk) > 0]

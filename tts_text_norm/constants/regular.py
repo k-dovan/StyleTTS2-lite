@@ -1,4 +1,4 @@
-from constants.charset import PunctuationCharset, SymbolCharset, CurrencyCharset
+from tts_text_norm.constants.charset import PunctuationCharset, SymbolCharset, CurrencyCharset
 import re
 
 class EmailRegular:

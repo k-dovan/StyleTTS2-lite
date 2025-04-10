@@ -1,9 +1,9 @@
 import re
 import unidecode
 import unicodedata
-import constants
+from tts_text_norm import constants
 from num2words import num2words
-from utils.helper import get_separator, split_num_word, is_number
+from tts_text_norm.utils.helper import get_separator, split_num_word, is_number
 
 
 class NumberReader:

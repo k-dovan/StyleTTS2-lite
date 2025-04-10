@@ -2,16 +2,16 @@ import os
 import re
 import string
 import unicodedata
-import constants
+from tts_text_norm import constants
 from loguru import logger
 from typing import List, Dict
 from py_vncorenlp import VnCoreNLP
-from cores import reader, regrex
-from utils.helper import is_short_name, split_punc_char
+from tts_text_norm.cores import reader, regrex
+from tts_text_norm.utils.helper import is_short_name, split_punc_char
 
 
 logger.add(
-    "logs/normalizer.log",
+    "tts_text_norm/logs/normalizer.log",
     level="INFO",
     format="{time} {level} {message}",
     rotation="10 MB",
@@ -284,7 +284,7 @@ class TextNormalizer:
 
         return re.sub(self._whitespace_re, " ", out_txts.lower()).strip()
 
-    def __call__(self, itexts: str) -> List[str]:
+    def __call__(self, itexts: str) -> str:
         otexts = []
         for line in self.pre_process(unicodedata.normalize("NFC", itexts)).split("\n"):
             if not line:
@@ -296,4 +296,4 @@ class TextNormalizer:
                 if sentence:
                     otexts.append(sentence)
 
-        return otexts
+        return ' '.join(otexts)

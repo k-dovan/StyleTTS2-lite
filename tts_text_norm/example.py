@@ -33,5 +33,5 @@ if __name__ == "__main__":
     tik = time.time()
     for text_inputs in TEST_TEXTS:
         text_outputs = text_normalizer(text_inputs)
-        print (' '.join(text_outputs))
+        print (text_outputs)
     print(f"[*] take {time.time() - tik} seconds to normalize {len(TEST_TEXTS)} texts")

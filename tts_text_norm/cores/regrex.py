@@ -1,6 +1,6 @@
 import re
-import constants
-from cores.reader import DateReader, TimeReader, NumberReader
+from tts_text_norm import constants
+from tts_text_norm.cores.reader import DateReader, TimeReader, NumberReader
 
 
 class RegrexNormalize:

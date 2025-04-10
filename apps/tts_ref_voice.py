@@ -5,18 +5,19 @@ import numpy as np
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 from huggingface_hub import snapshot_download
-from utils.text_processing import process_text_for_tts, split_text_for_inference
-from utils.audio_processing import generate_audio
+from tts_text_norm.utils.helper import split_text_for_inference
+
+import time
+from tts_text_norm.cores.normalizer import TextNormalizer
+os.environ["JAVA_HOME"] = "/usr/lib/jvm/java-21-openjdk-amd64"
 
 # Define paths
-MODEL_DIR = "model"
-OUTPUT_DIR = "outputs"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+MODEL_DIR = "apps/model"
 
 def load_model():
     """Download, load, and initialize the XTTS model."""
-    print("🔄 Đang tải mô hình XTTS...")
-    snapshot_download(repo_id="capleaf/viXTTS", repo_type="model", local_dir=MODEL_DIR)
+    # print("🔄 Đang tải mô hình XTTS...")
+    # snapshot_download(repo_id="capleaf/viXTTS", repo_type="model", local_dir=MODEL_DIR)
     config = XttsConfig()
     config.load_json(os.path.join(MODEL_DIR, "config.json"))
     config.model_config = {"arbitrary_types_allowed": True}
@@ -28,7 +29,16 @@ def load_model():
     print("✅ Mô hình XTTS đã tải thành công!")
     return xtts_model
 
+def load_normalizer():
+    tik = time.time()
+    text_normalizer = TextNormalizer("tts_text_norm/exps/vncorenlp/")
+    print(f"[*] take {time.time() - tik} seconds to load normalizer model")
+    tik = time.time()   
+        
+    return text_normalizer
+
 XTTS_MODEL = load_model()
+text_normalizer = load_normalizer()
 
 def text_to_speech(text, ref_audio):
     """Generate speech dynamically using an uploaded voice sample."""
@@ -44,7 +54,7 @@ def text_to_speech(text, ref_audio):
         )
         
         # Process text
-        normalized_text = process_text_for_tts(text=text)
+        normalized_text = text_normalizer(itexts=text)
         text_chunks = split_text_for_inference(text=normalized_text)
         
         # Generate speech
