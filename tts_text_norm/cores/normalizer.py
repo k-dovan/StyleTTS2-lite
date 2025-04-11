@@ -38,37 +38,15 @@ class TextNormalizer:
 
     # Bước 1: Xử lý các vấn đề liên quan đến encode hoặc các trường hợp gây lỗi khi tokenize bởi VncoreNLP
     def pre_process(self, in_txts: str) -> str:
-        out_txts = (
-            in_txts.replace("–", "-")
-            .replace("―", "-")
-            .replace("—", "-")
-            .replace("‘", " ")
-            .replace("’", " ")
-            .replace("'", " ")
-            .replace("´", " ")
-            .replace("“", '"')
-            .replace("”", '"')
-            .replace('"', " ")
-        )
-        out_txts = (
-            out_txts.replace("\u200c", "")
-            .replace("\u200b", "")
-            .replace("\ufeff", "")
-            .replace("\xa0", " ")
-        )
-
-        out_txts = (
-            out_txts.replace("(", " ( ")
-            .replace(")", " ) ")
-            .replace(", ", " , ")
-            .replace(" ,", " , ")
-            .replace(". ", " . ")
-            .replace(" .", " . ")
-            .replace("*", " * ")
-            .replace("=", " = ")
-            .replace("%", " % ")
-            .replace("+", " + ")
-        )
+        
+        out_txts = re.sub(r'[–―—]', '-', in_txts)
+        out_txts = re.sub(r'[\'‘’´“”"]', ' ', out_txts)
+        out_txts = re.sub(r'[\u200c\u200b\ufeff\xa0]', '', out_txts)        
+        
+        out_txts = re.sub(r'\(+', ' ( ', out_txts)
+        out_txts = re.sub(r'\)+', ' ) ', out_txts)
+        out_txts = re.sub(r'\s*([,.*=%+])+\s+', r' \1 ', out_txts)
+        out_txts = re.sub(r'\s+', r' ', out_txts)
 
         return regrex.RegrexNormalize.whitespace(out_txts)
 
@@ -120,7 +98,7 @@ class TextNormalizer:
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (bank) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.lower() in constants.VietnameseLoanWord.LOAN_WORD:
-                explained_word = constants.VietnameseLoanWord.LOAN_WORD[word.lower()]
+                explained_word = constants.VietnameseLoanWord.READER[word.lower()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (loan) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.lower() in constants.VietnameseMixWord.MIX_WORD:
@@ -286,12 +264,14 @@ class TextNormalizer:
 
     def __call__(self, itexts: str) -> str:
         otexts = []
-        for line in self.pre_process(unicodedata.normalize("NFC", itexts)).split("\n"):
+        for line in itexts.split("\n"):
             if not line:
                 continue
+            
+            line = unicodedata.normalize("NFC", line)
+            line = self.pre_process(line)
             line = self.tokenize(line)
             for sentence in line:
-                sentence = sentence.replace("T T&T T", "TT&TT")
                 sentence = self.normalize(sentence.replace("_", " "))
                 if sentence:
                     otexts.append(sentence)

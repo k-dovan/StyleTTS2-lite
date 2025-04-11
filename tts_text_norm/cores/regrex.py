@@ -26,7 +26,8 @@ class RegrexNormalize:
         # TODO: Implement this function
         for reg in constants.EmailRegular.REGREX:
             for match in re.compile(reg).finditer(text):
-                mtxt = f" link đính kèm "
+                mtxt = match.group() \
+                        .replace('@', ' a còng ')
                 text = text.replace(match.group(), mtxt)
         return text
 
