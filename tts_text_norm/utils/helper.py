@@ -123,7 +123,7 @@ def is_short_name(istring: str):
         len(ch) == 1 for ch in istring.replace(".", " ").split()
     )
     
-def split_text_for_inference(text: str, max_length=250) -> list:
+def split_text_for_inference(text: str, max_length=200) -> list:
     """Splits text into chunks based on sentence boundaries to fit within model constraints."""
     sentences = re.split(r'(?<=[.!?])\s+', text)  # Split by sentence endings
     chunks, current_chunk = [], ""
@@ -137,6 +137,8 @@ def split_text_for_inference(text: str, max_length=250) -> list:
     
     if current_chunk:
         chunks.append(current_chunk.strip())
+    
+    chunks = [re.sub(r'[.!?]', '', chunk) for chunk in chunks if len(chunk) > 0]
 
     print(f"[DEBUG] Split into {len(chunks)} Text Chunks: {chunks}")
-    return [chunk for chunk in chunks if len(chunk) > 0]
+    return chunks
