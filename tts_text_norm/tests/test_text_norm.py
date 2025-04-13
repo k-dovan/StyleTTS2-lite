@@ -2,7 +2,7 @@ import os
 import pytest
 
 os.environ["JAVA_HOME"] = "/usr/lib/jvm/java-21-openjdk-amd64"
-from cores.normalizer import TextNormalizer
+from tts_text_norm.cores.normalizer import TextNormalizer
 
 text_normalizer = TextNormalizer("./exps/vncorenlp/")
 
@@ -16,7 +16,7 @@ text_normalizer = TextNormalizer("./exps/vncorenlp/")
      "theo vê kép hát ô , số ca mắc cô vít mười chín đang có xu hướng giảm ."),
 ])
 def test_abbreviation_expansion(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 📅 Date Normalization
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -28,7 +28,7 @@ def test_abbreviation_expansion(input_text, expected_output):
      "tết nguyên đán rơi vào ngày hai mươi chín tháng một năm hai nghìn không trăm hai mươi lăm ."),
 ])
 def test_date_normalization(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # ⏰ Time Expressions
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -40,7 +40,7 @@ def test_date_normalization(input_text, expected_output):
      "chuyến bay cất cánh lúc hai mươi hai giờ bốn mươi lăm phút ."),
 ])
 def test_time_expressions(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 💰 Currency & Numbers
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -52,7 +52,7 @@ def test_time_expressions(input_text, expected_output):
      "gói cứu trợ trị giá hai tỷ đồng ."),
 ])
 def test_currency_and_numbers(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 📏 Units & Measurements
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -64,7 +64,7 @@ def test_currency_and_numbers(input_text, expected_output):
      "anh ấy cao một mét bảy mươi lăm ."),
 ])
 def test_units_and_measurements(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🔢 General Numbers
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -76,7 +76,7 @@ def test_units_and_measurements(input_text, expected_output):
      "có hơn mười hai nghìn ba trăm bốn mươi lăm ca mắc mới được ghi nhận ."),
 ])
 def test_general_numbers(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🧾 Common News Phrases
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -88,7 +88,7 @@ def test_general_numbers(input_text, expected_output):
      "thủ tướng phát biểu tại lễ khai mạc diễn ra ở hà nội ."),
 ])
 def test_common_phrases(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🌐 Websites & Links
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -98,7 +98,7 @@ def test_common_phrases(input_text, expected_output):
      "tham khảo thêm thông tin qua địa chỉ https hai chấm gạch gạch moet chấm gov chấm vi-en ."),
 ])
 def test_web_links(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🧠 Special Characters & Slang
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -107,7 +107,7 @@ def test_web_links(input_text, expected_output):
     ("Giá điện tăng “chóng mặt”.", "giá điện tăng chóng mặt ."),
 ])
 def test_special_characters(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🇻🇳 Vietnamese Names & Locations
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -117,7 +117,7 @@ def test_special_characters(input_text, expected_output):
      "cầu cần thơ là công trình tiêu biểu ở miền tây ."),
 ])
 def test_names_and_locations(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🧪 Mixed Context & Edge Cases
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -127,7 +127,7 @@ def test_names_and_locations(input_text, expected_output):
      "ông ấy nặng bảy mươi lăm ki lô gam và cao một mét tám mươi ."),
 ])
 def test_mixed_edge_cases(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output
 
 # 🧪 Multi-Sentence Test Cases
 @pytest.mark.parametrize("input_text, expected_output", [
@@ -153,4 +153,4 @@ def test_mixed_edge_cases(input_text, expected_output):
      "nhiệt độ ở hà nội là ba mươi hai độ xê . trong khi đó , thành phố hồ chí minh là ba mươi bốn độ xê ."),
 ])
 def test_multi_sentence_normalization(input_text, expected_output):
-    assert ' '.join(text_normalizer(input_text)) == expected_output
+    assert text_normalizer(input_text) == expected_output

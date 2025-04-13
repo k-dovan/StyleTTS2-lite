@@ -123,3 +123,9 @@ class VietnameseAbbreviation:
     EXCEPTION_ABBREVIATION = json.load(
         open(os.path.join(PATH, "exception.json"), "r", encoding="utf8")
     )
+
+class VietnameseProducts:
+    PATH = os.path.join(THIS_DIR, "dicts/static/product.json")
+    READER = json.load(open(PATH, "r", encoding="utf8"))
+    ### Vietnamese product ###
+    PRODUCT = list(READER.keys())

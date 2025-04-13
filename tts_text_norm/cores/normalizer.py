@@ -45,7 +45,7 @@ class TextNormalizer:
         
         out_txts = re.sub(r'\(+', ' ( ', out_txts)
         out_txts = re.sub(r'\)+', ' ) ', out_txts)
-        out_txts = re.sub(r'\s*([,.*=%+])+\s+', r' \1 ', out_txts)
+        out_txts = re.sub(r'\s*([,.*=%+]+)\s+', r' \1 ', out_txts)
         out_txts = re.sub(r'\s+', r' ', out_txts)
 
         return regrex.RegrexNormalize.whitespace(out_txts)
@@ -84,17 +84,13 @@ class TextNormalizer:
                         else ""
                     )
                 out_txts.append(explained_word)
-            elif word.lower() in constants.VietnameseWord.WORDS:
-                explained_word = word.lower()
-                # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (spec word) {display_colors.ENDC}: {word} -> {explained_word}")
-                out_txts.append(explained_word)
             # Xử lý với các từ điển artist/bank/loan/mix/symbol/website/currency
             elif word.lower() in constants.VietnameseArtist.ARTIST:
                 explained_word = constants.VietnameseArtist.READER[word.lower()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (artist) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.lower() in constants.VietnameseBank.BANK:
-                explained_word = constants.VietnameseBank.BANK[word.lower()]
+                explained_word = constants.VietnameseBank.READER[word.lower()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (bank) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             elif word.lower() in constants.VietnameseLoanWord.LOAN_WORD:
@@ -103,7 +99,7 @@ class TextNormalizer:
                 out_txts.append(explained_word)
             elif word.lower() in constants.VietnameseMixWord.MIX_WORD:
                 explained_word = self.normalize(
-                    constants.VietnameseMixWord.MIX_WORD[word.lower()]
+                    constants.VietnameseMixWord.READER[word.lower()]
                 )
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (mix) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
@@ -130,6 +126,9 @@ class TextNormalizer:
             elif word.lower() in constants.VietnameseWebsite.DOMAIN:
                 explained_word = constants.VietnameseWebsite.DOMAIN[word.lower()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (website) {display_colors.ENDC}: {word} -> {explained_word}")
+                out_txts.append(explained_word)                
+            elif word.lower() in constants.VietnameseProducts.PRODUCT:
+                explained_word = constants.VietnameseProducts.READER[word.lower()]
                 out_txts.append(explained_word)
             elif word.endswith(tuple(constants.VietnameseWebsite.DOMAIN)) and '.' in word:
                 explained_word = self.normalize(word.replace(".", " chấm "))
@@ -224,6 +223,10 @@ class TextNormalizer:
                         )
                 else:
                     explained_word = reader.WordReader.upper(word)
+                out_txts.append(explained_word)                
+            elif word.lower() in constants.VietnameseWord.WORDS:
+                explained_word = word.lower()
+                # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (spec word) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
             # Xử lý case mix toàn chữ
             elif all(ch in constants.VietnameseCharset.CHARSETS for ch in word):

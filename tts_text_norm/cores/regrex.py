@@ -233,7 +233,7 @@ class RegrexNormalize:
         for reg in constants.PhoneRegular.REGREX:
             for match in re.compile(reg).finditer(text):
                 temp = match.group()
-                mtxt = NumberReader.number(temp)
+                mtxt = NumberReader.number_sequence(temp)
                 text = text.replace(match.group(), mtxt)
 
         return text
@@ -278,5 +278,6 @@ def normalize(text: str) -> str:
     text = RegrexNormalize.phone(text)
     text = RegrexNormalize.continuous(text)
     text = RegrexNormalize.revert_currency(text)
+    #TODO:popular branch with multi-word names, like: Big C, etc.
 
     return text

@@ -136,7 +136,30 @@ class NumberReader:
         )
 
         return ostring
+    
+    @staticmethod
+    def number_sequence(istring: str) -> str:
+        """Đọc lần lượt từng số (e.g số điện thoại)"""
+        unit_number_reader = {
+            '0': "không",
+            '1': "một",
+            '2': "hai",
+            '3': "ba",
+            '4': "bốn",
+            '5': "năm",
+            '6': "sáu",
+            '7': "bảy",
+            '8': "tám",
+            '9': "chín"            
+        }
+        ostring = ""
+        if istring.startswith("+"):
+            ostring += "cộng "
+        ostring += " ".join(
+            [unit_number_reader[v] for v in istring if v.isdigit()]
+        )
 
+        return ostring
 
 class DateReader:
     @staticmethod
