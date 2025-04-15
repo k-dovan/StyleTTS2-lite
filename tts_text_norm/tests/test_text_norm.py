@@ -50,6 +50,8 @@ def test_time_expressions(input_text, expected_output):
      "mức lương tối thiểu là bốn triệu sáu trăm tám mươi nghìn việt nam đồng ."),
     ("Gói cứu trợ trị giá 2 tỷ đồng.",
      "gói cứu trợ trị giá hai tỷ đồng ."),
+    ("Đơn hàng đặt trên Tiki có tổng giá trị 2.350.000₫, mình chọn thanh toán qua MBBank để nhận ưu đãi giảm thêm 5%, lại còn được free ship tận nhà trong vòng 24 giờ.",
+     "đơn hàng đặt trên ti-ki có tổng giá trị hai triệu ba trăm năm mươi nghìn đồng , mình chọn thanh toán qua em bi banh để nhận ưu đãi giảm thêm năm phần trăm , lại còn được free ship tận nhà trong vòng hai mươi bốn giờ .")
 ])
 def test_currency_and_numbers(input_text, expected_output):
     assert text_normalizer(input_text) == expected_output

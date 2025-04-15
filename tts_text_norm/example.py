@@ -26,9 +26,10 @@ TEST_TEXTS = [
     # "Hôm nay là 23 tháng 3 năm 2025, nhiệt độ ngoài trời là 27°C, nhưng vào buổi tối sẽ giảm xuống chỉ còn 18°C. Tôi vừa mua một chiếc iPhone 14 Pro Max tại Apple Store với giá 30 triệu đồng. Màn hình của nó có kích thước 6.7 inch (tương đương 17 cm) và độ dày khoảng 7.65 mm nặng 30gr, 2kg, 3km2. Điện thoại này chạy trên hệ điều hành iOS 16, rất mượt mà và tối ưu.",
     # "Tối nay, tôi sẽ gọi cho đối tác tại số 0912345678 để thảo luận về Dự án AI. Sau đó, tôi sẽ tiếp tục theo dõi chương trình flashsale livestream trên Tiktok, nơi đang giảm giá 30% cho các sản phẩm công nghệ.",
     # "Tỷ lệ thất nghiệp giảm còn 3.5%.",
-    "Sở hữu Sky Villa không chỉ là tận hưởng không gian sống đẳng cấp, mà còn là trải nghiệm toàn diện với sân golf riêng, sân tennis tiêu chuẩn, spa thư giãn mỗi tối, phòng gym hiện đại mở cửa 24/7, bể bơi vô cực, vườn thiền trên cao ngay trong khuôn viên. Tất cả chỉ cách trung tâm Hà Nội 15 phút lái xe, với mức giá từ 18 tỷ, hỗ trợ vay lên đến 70% và miễn phí quản lý trong 2 năm đầu",
-    "Trải nghiệm không gian sống luxury giữa lòng Hà Nội với căn hộ VIP tại Times City, nơi hội tụ đầy đủ tiện ích: trung tâm thương mại, trường học quốc tế, bể bơi 4 mùa, sân vườn xanh mát, cùng hệ thống an ninh 24/7. Giá ưu đãi từ 4.8 tỷ, hỗ trợ trả góp linh hoạt trong 25 năm.",
-    "Chương trình khuyến mãi hot nhất tháng đang diễn ra đồng thời trên Facebook, Instagram và TikTok, với hàng trăm mã giảm giá tới 50%, freeship toàn quốc, cùng video review chân thực từ KOLs. Đừng quên tham gia mini game để rinh quà trị giá đến 5 triệu đồng!"
+    # "Sở hữu Sky Villa không chỉ là tận hưởng không gian sống đẳng cấp, mà còn là trải nghiệm toàn diện với sân golf riêng, sân tennis tiêu chuẩn, spa thư giãn mỗi tối, phòng gym hiện đại mở cửa 24/7, bể bơi vô cực, vườn thiền trên cao ngay trong khuôn viên. Tất cả chỉ cách trung tâm Hà Nội 15 phút lái xe, với mức giá từ 18 tỷ, hỗ trợ vay lên đến 70% và miễn phí quản lý trong 2 năm đầu",
+    # "Trải nghiệm không gian sống luxury giữa lòng Hà Nội với căn hộ VIP tại Times City, nơi hội tụ đầy đủ tiện ích: trung tâm thương mại, trường học quốc tế, bể bơi 4 mùa, sân vườn xanh mát, cùng hệ thống an ninh 24/7. Giá ưu đãi từ 4.8 tỷ, hỗ trợ trả góp linh hoạt trong 25 năm.",
+    # "Chương trình khuyến mãi hot nhất tháng đang diễn ra đồng thời trên Facebook, Instagram và TikTok, với hàng trăm mã giảm giá tới 50%, freeship toàn quốc, cùng video review chân thực từ KOLs. Đừng quên tham gia mini game để rinh quà trị giá đến 5 triệu đồng!",
+    "Honda SH 125i bản tiêu chuẩn giá khoảng 86 triệu, trong khi bản 160i phanh ABS lên tới hơn 100 triệu. Không biết có đáng để bỏ thêm tiền để lấy bản 160i không?"
 ]
 
 

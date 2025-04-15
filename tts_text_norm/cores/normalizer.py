@@ -225,10 +225,12 @@ class TextNormalizer:
                     explained_word = reader.WordReader.upper(word)
                 out_txts.append(explained_word)                
             elif word.lower() in constants.VietnameseWord.WORDS:
-                explained_word = word.lower()
+                explained_word = word.lower() if word.upper() \
+                            not in constants.VietnameseCharset.READER.keys() else \
+                                constants.VietnameseCharset.READER[word.upper()]
                 # print(f"\t** {display_colors.PURPLE} đọc từ điển cố định (spec word) {display_colors.ENDC}: {word} -> {explained_word}")
                 out_txts.append(explained_word)
-            # Xử lý case mix toàn chữ
+            # Xử lý case mix toàn chữ, e.g: VietNam, BienDong
             elif all(ch in constants.VietnameseCharset.CHARSETS for ch in word):
                 explained_word = "".join(
                     _word if _word.isupper() else f" {_word} "
