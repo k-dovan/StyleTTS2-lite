@@ -156,3 +156,12 @@ def test_mixed_edge_cases(input_text, expected_output):
 ])
 def test_multi_sentence_normalization(input_text, expected_output):
     assert text_normalizer(input_text) == expected_output
+    
+    
+# 🧪 Mixed product codes
+@pytest.mark.parametrize("input_text, expected_output", [
+    ("Cần bán MacBook Pro 2022 và điện thoại! Mình đang cần thanh lý MacBook Pro 2022, máy sử dụng tốt, cấu hình cao, thích hợp cho công việc đồ họa và lập trình. Ngoài ra, mình cũng có 2 chiếc điện thoại Samsung Galaxy S21 và iPhone 13 Pro Max muốn bán lại. Cả hai đều còn mới, không trầy xước, và vẫn còn bảo hành chính hãng. Ngoài ra, mình cũng có chiếc Oppo Reno 7 muốn bán với giá cực ưu đãi. Nếu ai đang cần mua Sim 4G hoặc 5G giá tốt thì liên hệ mình luôn nhé, mình có mấy loại sim của các nhà mạng lớn sẵn sàng giao ngay. Ai có nhu cầu, vui lòng liên hệ để thương lượng giá cả hợp lý.",
+    "cần bán mác búc pờ rồ hai nghìn không trăm hai mươi hai và điện thoại . mình đang cần thanh lý mác búc pờ rồ hai nghìn không trăm hai mươi hai , máy sử dụng tốt , cấu hình cao , thích hợp cho công việc đồ hoạ và lập trình . ngoài ra , mình cũng có hai chiếc điện thoại sam sung ga-lác-xi ét hai mươi mốt và ai phôn mười ba pờ rồ mắc muốn bán lại . cả hai đều còn mới , không trầy xước , và vẫn còn bảo hành chính hãng . ngoài ra , mình cũng có chiếc óp pô reno bảy muốn bán với giá cực ưu đãi . nếu ai đang cần mua sim bốn gờ hoặc năm gờ giá tốt thì liên hệ mình luôn nhé , mình có mấy loại sim của các nhà mạng lớn sẵn sàng giao ngay . ai có nhu cầu , vui lòng liên hệ để thương lượng giá cả hợp lý .")
+])
+def test_mixed_product_code(input_text, expected_output):
+    assert text_normalizer(input_text) == expected_output

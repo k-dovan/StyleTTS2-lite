@@ -264,6 +264,20 @@ class RegrexNormalize:
 
         return text
 
+    @staticmethod
+    def product_code(text: str) -> str:
+        """Normalize some popular product codes"""
+        for reg in constants.ProductCodeRegular.REGREX:
+            for match in re.compile(reg).finditer(text):
+                brand = match['brand']
+                model_number = match['model_number']
+                suffix = match['suffix']
+                
+                mtxt = f" {brand} {NumberReader.number(model_number, is_decimal=True)} {suffix} "
+                text = text.replace(match.group(), mtxt)
+
+        return text
+
 
 def normalize(text: str) -> str:
     text = RegrexNormalize.website(text)
@@ -278,6 +292,7 @@ def normalize(text: str) -> str:
     text = RegrexNormalize.phone(text)
     text = RegrexNormalize.continuous(text)
     text = RegrexNormalize.revert_currency(text)
+    text = RegrexNormalize.product_code(text)
     #TODO:popular branch with multi-word names, like: Big C, etc.
 
     return text

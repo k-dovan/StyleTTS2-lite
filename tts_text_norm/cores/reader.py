@@ -154,7 +154,7 @@ class NumberReader:
         }
         ostring = ""
         if istring.startswith("+"):
-            ostring += "cộng "
+            ostring += " cộng "
         ostring += " ".join(
             [unit_number_reader[v] for v in istring if v.isdigit()]
         )

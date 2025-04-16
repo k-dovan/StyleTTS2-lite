@@ -179,6 +179,12 @@ class TextNormalizer:
             elif "/" in word:                
                 explained_word = self.normalize(word.replace("/", " / "))                  
                 out_txts.append(explained_word)
+            # exceptional abbreviations
+            elif word in constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION:
+                explained_word = (
+                        constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION[word]
+                    )
+                out_txts.append(explained_word)
             # Xử lý với từ định dạng [UPPER]
             elif word.isupper():
                 # Xử lý từ đơn viết hoa trong tiếng việt
@@ -216,11 +222,7 @@ class TextNormalizer:
                         for i in range(2):
                             in_txts[idx + 1 + i] = None
                     else:
-                        explained_word = reader.WordReader.upper(word)
-                elif word in constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION:
-                    explained_word = (
-                            constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION[word]
-                        )
+                        explained_word = reader.WordReader.upper(word)                
                 else:
                     explained_word = reader.WordReader.upper(word)
                 out_txts.append(explained_word)                

@@ -139,3 +139,11 @@ class RevertCurrencyRegular:
     REGREX = [
         rf"(?P<currency>{CURRENCY})\s*(?P<amount>{AMOUNT})"
     ]
+    
+class ProductCodeRegular:
+    # Match some popular mixed product codes
+    # e.g: M13, Note20Ultra, Mi11Ultra, X80Pro, V25Pro, iPhone14Pro, OnePlus10Pro
+    #
+    REGREX = [
+        r"(?P<brand>[A-Za-z]+)(?P<model_number>\d{1,4})(?P<suffix>[A-Za-z+0-9]*)?"
+    ]
