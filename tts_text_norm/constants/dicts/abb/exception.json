@@ -1,6 +1,7 @@
 {
     "AEON": "i ông",
     "AI": "ây ai",
+    "NLP": "en eo pi",
     "AIDS": "ết",
     "APEC": "a pếch",
     "APINK": "ây pinh",
@@ -91,5 +92,10 @@
     "OKR": "ô ca rờ",
     "KPI": "cây pi ai",
     "DevUP": "đép ắp",
-    "VietDevelopers": "việt đì ve lớp pơ"
+    "devup": "đép ắp",
+    "VietDevelopers": "việt đì ve lớp pơ",
+    "B2C": "bi-tu-si",
+    "D2C": "đi-tu-si",
+    "VIP": "vi-ai-pi",
+    "API": "ây-pi-ai"
 }

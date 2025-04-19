@@ -263,6 +263,15 @@ class RegrexNormalize:
                 text = text.replace(match.group(), mtxt)
 
         return text
+    
+    @staticmethod
+    def confident_abbrs(text: str) -> str:
+        """Replace all confident abbreviations to their full form"""
+        CONFIDENT_ABBRS = constants.VietnameseAbbreviation.SINGLE_ABBREVIATION | constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION
+        # Compile a regex pattern that matches any abbreviation
+        pattern = re.compile(r'\b(?:' + '|'.join(re.escape(k) for k in CONFIDENT_ABBRS.keys()) + r')\b')
+
+        return pattern.sub(lambda m: CONFIDENT_ABBRS.get(m.group(0), m.group(0)), text)
 
     @staticmethod
     def product_code(text: str) -> str:
@@ -280,6 +289,10 @@ class RegrexNormalize:
 
 
 def normalize(text: str) -> str:
+    
+    # first, replace all confident abbreviations
+    text = RegrexNormalize.confident_abbrs(text)
+    
     text = RegrexNormalize.website(text)
     text = RegrexNormalize.mail(text)
     text = RegrexNormalize.date(text)
