@@ -269,9 +269,9 @@ class RegrexNormalize:
         """Replace all confident abbreviations to their full form"""
         CONFIDENT_ABBRS = constants.VietnameseAbbreviation.SINGLE_ABBREVIATION | constants.VietnameseAbbreviation.EXCEPTION_ABBREVIATION
         # Compile a regex pattern that matches any abbreviation
-        pattern = re.compile(r'\b(?:' + '|'.join(re.escape(k) for k in CONFIDENT_ABBRS.keys()) + r')\b')
+        pattern = re.compile(r'\s(?P<abbr>' + '|'.join(re.escape(k) for k in CONFIDENT_ABBRS.keys()) + r')\s')
 
-        return pattern.sub(lambda m: CONFIDENT_ABBRS.get(m.group(0), m.group(0)), text)
+        return pattern.sub(lambda m: f" {CONFIDENT_ABBRS.get(m['abbr'], m['abbr'])} ", text)
 
     @staticmethod
     def product_code(text: str) -> str:
