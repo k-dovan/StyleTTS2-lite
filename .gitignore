@@ -1,7 +1,9 @@
 venv/
 .vscode/
 .cache/
-model/
+.cached/
+models/
 out/
 *.log
 __pycache__/
+exps/

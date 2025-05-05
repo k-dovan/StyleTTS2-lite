@@ -13,7 +13,7 @@ from tts_text_norm.cores.normalizer import TextNormalizer
 os.environ["JAVA_HOME"] = "/usr/lib/jvm/java-21-openjdk-amd64"
 
 # Define paths
-MODEL_DIR = "apps/model"
+MODEL_DIR = "apps/models/vi"
 
 # Get the directory where the current script lives
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +52,7 @@ def load_model():
 
 def load_normalizer():
     tik = time.time()
-    text_normalizer = TextNormalizer("tts_text_norm/exps/vncorenlp/")
+    text_normalizer = TextNormalizer("./.cached/exps/vncorenlp/")
     print(f"[*] take {time.time() - tik} seconds to load normalizer model")
     tik = time.time()   
         
