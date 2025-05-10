@@ -1,43 +1,76 @@
 import gradio as gr
-from TTS.api import TTS
+from piper import PiperVoice
+import numpy as np
+import wave
+import tempfile
 
-# Cached model instance
-cached_model = {"lang": None, "tts": None}
-
-# Predefined models for each language
-MODEL_MAPPING = {
-    "en": "tts_models/en/ljspeech/tacotron2-DDC",
-    "vi": "tts_models/vi/vais1000/glow-tts"
+VOICE_MODELS = {
+    "en": {
+        "lessac-medium": {
+            "model_path": "models/en_US-lessac-medium.onnx",
+            "config_path": "models/en_US-lessac-medium.onnx.json"
+        },
+        "ljspeech-high": {
+            "model_path": "models/en_US-ljspeech-high.onnx",
+            "config_path": "models/en_US-ljspeech-high.onnx.json"
+        }
+    },
+    "vi": {
+        "vivos-x_low": {
+            "model_path": "models/vi_VN-vivos-x_low.onnx",
+            "config_path": "models/vi_VN-vivos-x_low.onnx.json"
+        },
+        "25hours_single-low": {
+            "model_path": "models/vi_VN-25hours_single-low.onnx",
+            "config_path": "models/vi_VN-25hours_single-low.onnx.json"
+        },
+        "vais1000-medium": {
+            "model_path": "models/vi_VN-vais1000-medium.onnx",
+            "config_path": "models/vi_VN-vais1000-medium.onnx.json"
+        }
+    }
 }
 
-def load_model(language):
-    """Load and cache TTS model based on the selected language."""
-    if cached_model["lang"] != language:
-        print(f"Loading new model for language: {language}")
-        model_name = MODEL_MAPPING.get(language)
-        tts = TTS(model_name)
-        cached_model["lang"] = language
-        cached_model["tts"] = tts
-    return cached_model["tts"]
+# Cache voices
+loaded_voices = {}
 
-def synthesize(text, language):
-    if not text.strip():
-        return None
-    tts = load_model(language)
-    # Return the audio path (gradio handles playing)
-    output_path = "./.cached/output.wav"
-    tts.tts_to_file(text=text, file_path=output_path)
-    return output_path
+def load_voice(lang, voice_name):
+    key = f"{lang}:{voice_name}"
+    if key not in loaded_voices:
+        model_info = VOICE_MODELS[lang][voice_name]
+        voice = PiperVoice.load(
+            model_path=model_info["model_path"],
+            config_path=model_info["config_path"],
+            use_cuda=False
+        )
+        loaded_voices[key] = voice
+    return loaded_voices[key]
 
-# Gradio interface
+def synthesize(lang, voice_name, text):
+    voice = load_voice(lang, voice_name)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
+        with wave.open(tmp_wav.name, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(voice.config.sample_rate)
+            voice.synthesize(text, wav_file)
+        return tmp_wav.name
+
+def update_voice_radio(lang):
+    voices = list(VOICE_MODELS[lang].keys())
+    return gr.update(choices=voices, value=voices[0])
+
 with gr.Blocks() as app:
-    gr.Markdown("## 🗣️ Multilingual Text-to-Speech App")
-    lang = gr.Radio(["en", "vi"], label="Choose Language", value="en")
-    textbox = gr.Textbox(label="Enter Text", placeholder="Type something...")
-    btn = gr.Button("Generate Voice")
-    audio_output = gr.Audio(label="Generated Speech")
+    gr.Markdown("## 🗣️ Piper TTS Synthesizer")
 
-    btn.click(fn=synthesize, inputs=[textbox, lang], outputs=audio_output)
+    lang = gr.Radio(choices=["en", "vi"], label="Select Language", value="en", interactive=True)
+    voice = gr.Radio(choices=list(VOICE_MODELS["en"].keys()), label="Select Voice")
+    text = gr.Textbox(label="Enter Text", placeholder="Type your sentence here...")
+    generate_btn = gr.Button("🔊 Generate Speech")
+    audio_output = gr.Audio(label="Synthesized Audio", type="filepath")
+
+    lang.change(fn=update_voice_radio, inputs=lang, outputs=voice)
+    generate_btn.click(fn=synthesize, inputs=[lang, voice, text], outputs=audio_output)
 
 if __name__ == "__main__":
     app.launch(
