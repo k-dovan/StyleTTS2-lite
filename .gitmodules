@@ -1,3 +1,0 @@
-[submodule "finetuning/piper"]
-	path = finetuning/piper
-	url = git@github.com:k-dovan/piper.git
