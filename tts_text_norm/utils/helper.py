@@ -124,21 +124,43 @@ def is_short_name(istring: str):
     )
     
 def split_text_for_inference(text: str, max_length=200) -> list:
-    """Splits text into chunks based on sentence boundaries to fit within model constraints."""
-    sentences = re.split(r'(?<=[.!?])\s+', text)  # Split by sentence endings
-    chunks, current_chunk = [], ""
+    """Splits text into chunks based on sentence boundaries to fit within model constraints,
+    and further by commas if needed. Preserves sentence-ending punctuation in final output."""
     
+    print (f'input text for splitting: {text}')
+    
+    # First split by sentence endings
+    sentences = re.split(r'(?<=[.!?])\s+', text)  # Splits after ., !, or ? followed by space
+    chunks, current_chunk = [], ""
+
     for sentence in sentences:
-        if len(current_chunk) + len(sentence) <= max_length:
+        if len(current_chunk) + len(sentence) + 1 <= max_length:
             current_chunk += sentence + " "
         else:
             chunks.append(current_chunk.strip())
             current_chunk = sentence + " "
-    
+
     if current_chunk:
         chunks.append(current_chunk.strip())
-    
-    chunks = [re.sub(r'[.!?]', '', chunk) for chunk in chunks if len(chunk) > 0]
 
-    print(f"[DEBUG] Split into {len(chunks)} Text Chunks: {chunks}")
-    return chunks
+    # Refine any over-length chunks by splitting at commas
+    refined_chunks = []
+    for chunk in chunks:
+        if len(chunk) <= max_length:
+            refined_chunks.append(chunk)
+        else:
+            subparts = re.split(r'\s+,\s+', chunk)
+            temp = ""
+            for part in subparts:
+                if len(temp) + len(part) + 2 <= max_length:  # +2 for ", "
+                    temp += part + " , "
+                else:
+                    refined_chunks.append(temp.strip(", "))
+                    temp = part + " , "
+            if temp:
+                refined_chunks.append(temp.strip(", "))
+
+    refined_chunks = [(re.sub(r'[,.!?]$', '', re.sub(r'(\s*,\s*)+', ' , ', chunk))).strip() for chunk in refined_chunks if len(chunk) > 0]
+
+    print(f"[DEBUG] Split into {len(refined_chunks)} Text Chunks: {refined_chunks}")
+    return refined_chunks

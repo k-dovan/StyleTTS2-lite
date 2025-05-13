@@ -77,6 +77,8 @@ class TextNormalizer:
                     explained_word = ","
                 elif word in constants.PunctuationCharset.DURATION:
                     explained_word = "," if idx != len(in_txts) - 1 else "."
+                elif word in constants.PunctuationCharset.SKIP:
+                    explained_word = ""
                 else:
                     explained_word = (
                         constants.PunctuationCharset.READER[word]

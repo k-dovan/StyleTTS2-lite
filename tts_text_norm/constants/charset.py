@@ -73,12 +73,11 @@ class PunctuationCharset:
     ### Punctuation ###
     PUNCTUATION = list(READER.keys())
     ### Special ###
-    SKIP = ["'", """, """, """, """, "*", "…", ")", "]", "}", "~", "`", "_"]
-    SILENT = [".", ",", ";", "!", "-", "?", ":", "(", "[", "{"]
-    DURATION = SKIP + SILENT
+    SKIP = ["'", """, """, """, """, "*", "~", "`", "-", "_"]
+    DURATION = [".", ",", ";", "!", "?", ":", "(", ")", "[", "]", "{", "}", "…"]
     READ = []
     for punc in PUNCTUATION:
-        if punc not in DURATION:
+        if punc not in (SKIP + DURATION):
             READ.append(punc)
 
 
