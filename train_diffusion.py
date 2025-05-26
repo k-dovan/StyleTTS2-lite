@@ -174,7 +174,7 @@ def main(config_path):
         
     # load models if there is a model
     if load_pretrained:
-        print("Loading main model...")
+        print("\nLoading main model...")
         try:
             training_strats = config['training_strats']
         except Exception as e:
@@ -197,13 +197,15 @@ def main(config_path):
     diff_model_path = parent_dir / "current_diffusion.pth"
 
     if diff_model_path.is_file():
-        print("Found 'current_diffusion.pth'.")
+        print("\nFound 'current_diffusion.pth'.")
         print("Loading diffusion module...")
-        model_diffusion, diffusion_optimizer, start_epoch, iters = load_checkpoint(model_diffusion,  diffusion_optimizer, 
-                                                        config['pretrained_model'], 
+        #workaround to use load_checkpoint
+        model_diffusion, diffusion_optimizer, start_epoch, iters = load_checkpoint({'diffusion': model_diffusion},  diffusion_optimizer, 
+                                                        diff_model_path, 
                                                         load_only_params= False,
                                                         ignore_modules=training_strats['ignore_modules'],
                                                         freeze_modules=training_strats['freeze_modules'])
+        model_diffusion = model_diffusion['diffusion']
     else:
         print("'current_diffusion.pth' not found! Initializing a new one...")
         
@@ -217,6 +219,8 @@ def main(config_path):
     print('\diffusion', diffusion_optimizer.optimizers['diffusion'])
     
 ############################################## TRAIN ##############################################
+    model.predictor.train()
+    model_diffusion.train()
 
     for epoch in range(start_epoch, epochs):
         start_time = time.time()
@@ -247,7 +251,13 @@ def main(config_path):
             loss_diff = model_diffusion.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2), features=s).mean() # EDM loss
             loss_sty = F.l1_loss(s_preds, s.detach()) # style reconstruction loss
 
+            diffusion_loss =  loss_sty + loss_diff
+
+            diffusion_optimizer.zero_grad()
+            diffusion_loss.backward()
             diffusion_optimizer.step('diffusion')
+
+            iters = iters + 1
     
             if (i+1)%log_interval == 0:
                 logger.info (f'Epoch [{epoch+1}/{epochs}], \
@@ -260,15 +270,20 @@ def main(config_path):
                 
                 print('Time elasped:', time.time()-start_time)
 
-            if iters % 100 == 0: # Save to current_model every 2000 iters
-                state = {
-                    'net':  {'diffusion': model_diffusion.state_dict()}, 
-                    'optimizer': diffusion_optimizer.state_dict(),
-                    'iters': iters,
-                    'epoch': epoch,
-                }
-                save_path = os.path.join(log_dir, 'current_diffusion.pth')
-                torch.save(state, save_path)  
+        if (epoch + 1) % save_freq == 0 :
+            print('Saving..')
+            state = {
+                'net':  {'diffusion': model_diffusion.state_dict()}, 
+                'optimizer': diffusion_optimizer.state_dict(),
+                'iters': iters,
+                'epoch': epoch,
+            }
+            save_path = os.path.join(log_dir, 'current_diffusion.pth')
+            torch.save(state, save_path)
+
+            save_path = os.path.join(log_dir, 'diff_epoch_%05d.pth' % epoch)
+            torch.save(state, save_path)
+
 
 
 ############################################## EVAL ##############################################
