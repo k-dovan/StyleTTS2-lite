@@ -125,10 +125,13 @@ def main(config_path):
     }
     style_dim = config['model_params']['style_dim']
     hidden_dim = config['model_params']['hidden_dim']
-    transformer = StyleTransformer1d(channels=style_dim, 
+    transformer = Transformer1d(channels=style_dim, 
                                     context_embedding_features=hidden_dim,
-                                    context_features=style_dim, 
                                     **diffusion_params['transformer'])
+    # transformer = StyleTransformer1d(channels=style_dim, 
+    #                                 context_embedding_features=hidden_dim,
+    #                                 context_features=style_dim, 
+    #                                 **diffusion_params['transformer'])
     
     model_diffusion = AudioDiffusionConditional(
         in_channels=1,
@@ -136,7 +139,7 @@ def main(config_path):
         embedding_features=hidden_dim,
         embedding_mask_proba=diffusion_params["embedding_mask_proba"], # Conditional dropout of batch elements,
         channels=style_dim,
-        context_features=style_dim,
+        #context_features=style_dim,
     )
     
     model_diffusion.diffusion = KDiffusion(
@@ -155,7 +158,7 @@ def main(config_path):
         clamp=False
     )
 
-    model_diffusion =   MyDataParallel(model_diffusion) 
+    model_diffusion = MyDataParallel(model_diffusion) 
 
     # END DIFFUSION
     
@@ -245,10 +248,9 @@ def main(config_path):
             s_preds = sampler(  noise = torch.randn_like(s).unsqueeze(1).to(device), 
                                 embedding=t_en.transpose(-1, -2),
                                 embedding_scale=1,
-                                features=s, # reference from the same speaker as the embedding
                                 embedding_mask_proba=0.1,
                                 num_steps=num_steps).squeeze(1)
-            loss_diff = model_diffusion.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2), features=s).mean() # EDM loss
+            loss_diff = model_diffusion.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2)).mean() # EDM loss
             loss_sty = F.l1_loss(s_preds, s.detach()) # style reconstruction loss
 
             diffusion_loss =  loss_sty + loss_diff
