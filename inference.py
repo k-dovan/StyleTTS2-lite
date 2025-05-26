@@ -11,6 +11,10 @@ from nltk.tokenize import word_tokenize
 import nltk
 nltk.download('punkt_tab')
 
+from Modules.diffusion.modules import Transformer1d, StyleTransformer1d
+from Modules.diffusion.diffusion import AudioDiffusionConditional
+from Modules.diffusion.sampler import DiffusionSampler, ADPM2Sampler, KarrasSchedule, KDiffusion, LogNormalDistribution
+
 from models import ProsodyPredictor, TextEncoder, StyleEncoder
 
 class Preprocess:
@@ -58,9 +62,82 @@ class Preprocess:
         mask = torch.gt(mask+1, lengths.unsqueeze(1))
         return mask
 
+class Diffusion(torch.nn.Module):
+    def __init__(self, config_path, models_path):
+        super().__init__()
+        super().__init__()
+        self.register_buffer("get_device", torch.empty(0))
+        config = yaml.safe_load(open(config_path, "r", encoding="utf-8"))
+        diffusion_params = {
+            "dist": {"estimate_sigma_data": True, "mean": -3.0, "sigma_data": 0.19926648961191362, "std": 1.0},
+            "transformer": { "head_features": 64, "multiplier": 2, "num_heads": 8, "num_layers": 3 },
+            "embedding_mask_proba": 0.1
+        }
+        style_dim = config['model_params']['style_dim']
+        hidden_dim = config['model_params']['hidden_dim']
+        transformer = Transformer1d(channels=style_dim, 
+                                    context_embedding_features=hidden_dim,
+                                    **diffusion_params['transformer'])
+        # transformer = StyleTransformer1d(channels=style_dim, 
+        #                                 context_embedding_features=hidden_dim,
+        #                                 context_features=style_dim, 
+        #                                 **diffusion_params['transformer'])
+        
+        self.model_diffusion = AudioDiffusionConditional(
+            in_channels=1,
+            embedding_max_length=512,
+            embedding_features=hidden_dim,
+            embedding_mask_proba=diffusion_params["embedding_mask_proba"], # Conditional dropout of batch elements,
+            channels=style_dim,
+            #context_features=style_dim,
+        )
+        
+        self.model_diffusion.diffusion = KDiffusion(
+            net=self.model_diffusion.unet,
+            sigma_distribution=LogNormalDistribution(mean = diffusion_params["dist"]["mean"], std = diffusion_params["dist"]["std"]),
+            sigma_data=diffusion_params["dist"]["sigma_data"], # a placeholder, will be changed dynamically when start training diffusion model
+            dynamic_threshold=0.0 
+        )
+        self.model_diffusion.diffusion.net = transformer
+        self.model_diffusion.unet = transformer
+
+        self.sampler = DiffusionSampler(
+            self.model_diffusion.diffusion,
+            sampler=ADPM2Sampler(),
+            sigma_schedule=KarrasSchedule(sigma_min=0.0001, sigma_max=3.0, rho=9.0),
+            clamp=False
+        )
+        
+        self.__load_models(models_path)
+
+    def __load_models(self, models_path):
+        params_whole = torch.load(models_path, map_location='cpu')
+        state_dict = params_whole['net']['diffusion']
+
+        try:
+            self.model_diffusion.load_state_dict(state_dict)
+        except:
+            from collections import OrderedDict
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:] # remove `module.`
+                new_state_dict[name] = v
+            self.model_diffusion.load_state_dict(new_state_dict, strict=False)
+
+        total_params = sum(p.numel() for p in self.model_diffusion.parameters())
+        print("diffusion:", total_params)
+
+    def get_styles(self, t_en, styles, steps=5, embedding_scale=1):
+        s_preds = self.sampler( noise = torch.randn_like(styles).unsqueeze(1).to(self.get_device.device), 
+                                embedding=t_en.transpose(-1, -2),
+                                embedding_scale=embedding_scale,
+                                embedding_mask_proba=0.1,
+                                num_steps=steps).squeeze(1)
+        return s_preds
+    
 #For inference only
 class StyleTTS2(torch.nn.Module):
-    def __init__(self, config_path, models_path):
+    def __init__(self, config_path, models_path, config_diff_path=False, models_diff_path=False):
         super().__init__()
         self.register_buffer("get_device", torch.empty(0))
         self.preprocess = Preprocess()
@@ -120,8 +197,11 @@ class StyleTTS2(torch.nn.Module):
         self.predictor           = ProsodyPredictor(style_dim=args.style_dim, d_hid=args.hidden_dim, nlayers=args.n_layer, max_dur=args.max_dur, dropout=args.dropout)
         self.text_encoder        = TextEncoder(channels=args.hidden_dim, kernel_size=5, depth=args.n_layer, n_symbols=args.n_token)
         self.style_encoder       = StyleEncoder(dim_in=args.dim_in, style_dim=args.style_dim, max_conv_dim=args.hidden_dim)# acoustic style encoder
-
         self.__load_models(models_path)
+
+        self.diffusion = False
+        if config_diff_path and models_diff_path:
+            self.diffusion = Diffusion(config_diff_path, models_diff_path)
     
     def __recursive_munch(self, d):
         if isinstance(d, dict):
@@ -221,7 +301,7 @@ class StyleTTS2(torch.nn.Module):
 
         return ref_s
         
-    def __inference(self, phonem, ref_s, speed=1, prev_d_mean=0, t=0.1):
+    def __inference(self, phonem, ref_s, steps=5, embedding_scale=1, speed=1, prev_d_mean=0, t=0.1):
         device = self.get_device.device
         speed = min(max(speed, 0.0001), 2) #speed range [0, 2]
         
@@ -237,7 +317,11 @@ class StyleTTS2(torch.nn.Module):
 
             # encode
             t_en = self.text_encoder(tokens, input_lengths, text_mask)
-            s = ref_s.to(device)
+
+            if self.diffusion:
+                s = self.diffusion.get_styles(t_en, ref_s.to(device), steps=steps, embedding_scale=embedding_scale)
+            else:
+                s = ref_s.to(device)
         
             # cal alignment
             d = self.predictor.text_encoder(t_en, s, input_lengths, text_mask)
@@ -300,7 +384,7 @@ class StyleTTS2(torch.nn.Module):
         except Exception as e:
             print(e)
 
-    def generate(self, phonem, style, stabilize=True, n_merge=16):
+    def generate(self, phonem, style, steps=5, embedding_scale=1, n_merge=16, stabilize=True):
         if stabilize:   smooth_value=0.2
         else:           smooth_value=0    
         
@@ -310,7 +394,12 @@ class StyleTTS2(torch.nn.Module):
         print("Generating Audio...")
         text_norm = self.preprocess.text_preprocess(phonem, n_merge=n_merge)
         for sentence in text_norm:
-            wav, prev_d_mean = self.__inference(sentence, style['style'], speed=style['speed'], prev_d_mean=prev_d_mean, t=smooth_value)
+            wav, prev_d_mean = self.__inference(sentence, style['style'], 
+                                                steps=steps, 
+                                                embedding_scale=embedding_scale,
+                                                speed=style['speed'], 
+                                                prev_d_mean=prev_d_mean, 
+                                                t=smooth_value)
             wav = wav[4000:-4000] #Remove weird pulse and silent tokens
             list_wav.append(wav)
         
