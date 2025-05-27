@@ -4,9 +4,9 @@ log_interval: 20
 device: cuda
 epochs: 1000
 batch_size: 128
-max_len: 600 # maximum number of frames
+max_len: 650 # maximum number of frames
 pretrained_model: ./Models/Finetune/vivoice_120k.pth
-load_only_params: true # set to true if do not want to load epoch numbers and optimizer parameters
+load_only_params: false # set to true if do not want to load epoch numbers and optimizer parameters
 debug: false
 
 data_params:
