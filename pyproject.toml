@@ -39,3 +39,8 @@ onnx = [
 
 [tool.uv.sources]
 monotonic-align = { git = "https://github.com/resemble-ai/monotonic_align.git" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+]
