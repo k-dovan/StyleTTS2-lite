@@ -125,12 +125,6 @@ def main(config_path):
 
     load_pretrained = config.get('pretrained_model', '') != ''
 
-    # gl = GeneratorLoss(model.mpd, model.msd).to(device)
-    # dl = DiscriminatorLoss(model.mpd, model.msd).to(device)
-
-    # gl = MyDataParallel(gl)
-    # dl = MyDataParallel(dl)
-
     sampler = DiffusionSampler(
         model.diffusion.diffusion,
         sampler=ADPM2Sampler(),
@@ -180,10 +174,8 @@ def main(config_path):
     else:
             raise Exception('Must have a pretrained!')
         
-    n_down = model.text_aligner.n_down
     iters = 0
     torch.cuda.empty_cache()
-    #stft_loss = MultiResolutionSTFTLoss().to(device)
     print('\ndecoder', optimizer.optimizers['decoder'])
     
 ############################################## TRAIN ##############################################
@@ -193,8 +185,6 @@ def main(config_path):
 
         _ = [model[key].eval() for key in model]
 
-        model.msd.train()
-        model.mpd.train()
         model.diffusion.train()
 
         for i, batch in enumerate(train_dataloader):
@@ -203,51 +193,28 @@ def main(config_path):
             texts, input_lengths, mels, mel_input_length = batch
             
             with torch.no_grad():
-                mask = length_to_mask(mel_input_length // (2 ** n_down)).to(device)
                 text_mask = length_to_mask(input_lengths).to(texts.device)
-            try:
-                ppgs, s2s_pred, s2s_attn = model.text_aligner(mels, mask, texts)
-                s2s_attn = s2s_attn.transpose(-1, -2)
-                s2s_attn = s2s_attn[..., 1:]
-                s2s_attn = s2s_attn.transpose(-1, -2)
-            except:
-                continue
-
-            mask_ST = mask_from_lens(s2s_attn, input_lengths, mel_input_length // (2 ** n_down))
-            s2s_attn_mono = maximum_path(s2s_attn, mask_ST)
         
             # encode
             t_en = model.text_encoder(texts, input_lengths, text_mask)
 
-            asr = (t_en @ s2s_attn_mono)
-
             # cut
             mel_len = min(int(mel_input_length.min().item() / 2 - 1), max_len // 2)
-            en = []
             gt = []
             wav = []
             for bib in range(len(mel_input_length)):
                 mel_length = int(mel_input_length[bib].item() / 2)
 
                 random_start = np.random.randint(0, mel_length - mel_len)
-                en.append(asr[bib, :, random_start:random_start+mel_len])
                 gt.append(mels[bib, :, (random_start * 2):((random_start+mel_len) * 2)])
                 
                 y = waves[bib][(random_start * 2) * 300:((random_start+mel_len) * 2) * 300]
                 wav.append(torch.from_numpy(y).to(device))
-            en = torch.stack(en)
+
             gt = torch.stack(gt).detach()
             wav = torch.stack(wav).float().detach()
 
-            # prosody
-            with torch.no_grad():
-                F0_real, _, _ = model.pitch_extractor(gt.unsqueeze(1))
-                N_real = log_norm(gt.unsqueeze(1)).squeeze(1)
-                wav = wav.unsqueeze(1)
-
             s = model.style_encoder(gt.unsqueeze(1))
-
-            y_rec = model.decoder(en, F0_real, N_real, s)
             
             num_steps = np.random.randint(3, 5)
             s_preds = sampler(  noise = torch.randn_like(s).unsqueeze(1).to(device), 
@@ -256,25 +223,12 @@ def main(config_path):
                                 embedding_mask_proba=0.1,
                                 num_steps=num_steps).squeeze(1)
             
-            # #disc loss
-            # optimizer.zero_grad()
-            # d_loss = dl(wav.detach(), y_rec.detach()).mean()
-            # d_loss.backward()
-            # optimizer.step('msd')
-            # optimizer.step('mpd')
-
-            #gen loss
             optimizer.zero_grad()
-            #mel_loss = stft_loss(y_rec, wav)
-            #gen_loss = gl(wav, y_rec).mean()
             loss_diff = model.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2)).mean() # EDM loss
             loss_sty = F.l1_loss(s_preds, s.detach()) # style reconstruction loss
-            g_loss = loss_params.lambda_diff* loss_diff   +\
-                     loss_params.lambda_sty * loss_sty    #+\
-                     #loss_params.lambda_mel * mel_loss    +\
-                     #loss_params.lambda_gen * gen_loss 
-            g_loss.backward()
-            #optimizer.step('style_encoder')
+            style_loss = loss_params.lambda_diff* loss_diff   +\
+                     loss_params.lambda_sty * loss_sty
+            style_loss.backward()
             optimizer.step('diffusion')
 
             iters = iters + 1
@@ -285,15 +239,10 @@ def main(config_path):
                     f'Step [{i+1}/{len(train_list)//batch_size}], '
                     f'Diff Loss: {loss_diff:.5f}, '
                     f'Sty Loss: {loss_sty:.5f}'
-                    #f'Disc Loss: {d_loss:.5f}'
                 )
 
                 writer.add_scalar('train/sty_loss', float(f"{loss_sty:.5f}"), iters)
                 writer.add_scalar('train/diff_loss', float(f"{loss_diff:.5f}"), iters)
-                # writer.add_scalar('train/mel_loss', float(f"{mel_loss:.5f}"), iters)
-                # writer.add_scalar('train/gen_loss', float(f"{gen_loss:.5f}"), iters)
-                # writer.add_scalar('train/d_loss', float(f"{d_loss:.5f}"), iters)
-
                 
                 print('Time elasped:', time.time()-start_time)
 

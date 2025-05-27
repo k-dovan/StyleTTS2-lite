@@ -285,6 +285,7 @@ class StyleTTS2(torch.nn.Module):
                                     # features=s,
                                     embedding_mask_proba=0.1,
                                     num_steps=steps).squeeze(1)
+                    s = s*0.9 + s_prosody*0.1
                     self.cache_s_prosody = s_prosody
                 else:
                     s_prosody = self.sampler(  noise = torch.randn_like(s).unsqueeze(1).to(device), 
@@ -294,6 +295,7 @@ class StyleTTS2(torch.nn.Module):
                                     embedding_mask_proba=0.1,
                                     num_steps=steps).squeeze(1)
                     s_prosody = s_prosody*0.6 + self.cache_s_prosody*0.4
+                    s         = s*0.9 + s_prosody*0.1
                     self.cache_s_prosody = s_prosody
             else:
                 s_prosody = ref_s.to(device)
@@ -309,7 +311,7 @@ class StyleTTS2(torch.nn.Module):
             # else:
             #     dur_stats = torch.empty(duration.shape).normal_(mean=duration.mean(), std=duration.std()).to(device)
             # duration = duration*(1-t) + dur_stats*t
-            # duration[:,1:-2] = self.__replace_outliers_zscore(duration[:,1:-2]) #Normalize outlier
+            duration[:,1:-2] = self.__replace_outliers_zscore(duration[:,1:-2]) #Normalize outlier
             
             duration /= speed
 
@@ -376,7 +378,7 @@ class StyleTTS2(torch.nn.Module):
                                                 prev_d_mean=prev_d_mean, 
                                                 t=smooth_value,
                                                 use_diffusion=use_diffusion)
-            wav = wav[4000:-4000] #Remove weird pulse and silent tokens
+            wav = wav[6000:-6000] #Remove weird pulse and silent tokens
             list_wav.append(wav)
         
         final_wav = np.concatenate(list_wav)
