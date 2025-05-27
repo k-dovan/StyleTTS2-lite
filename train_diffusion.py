@@ -125,11 +125,11 @@ def main(config_path):
 
     load_pretrained = config.get('pretrained_model', '') != ''
 
-    gl = GeneratorLoss(model.mpd, model.msd).to(device)
-    dl = DiscriminatorLoss(model.mpd, model.msd).to(device)
+    # gl = GeneratorLoss(model.mpd, model.msd).to(device)
+    # dl = DiscriminatorLoss(model.mpd, model.msd).to(device)
 
-    gl = MyDataParallel(gl)
-    dl = MyDataParallel(dl)
+    # gl = MyDataParallel(gl)
+    # dl = MyDataParallel(dl)
 
     sampler = DiffusionSampler(
         model.diffusion.diffusion,
@@ -183,7 +183,7 @@ def main(config_path):
     n_down = model.text_aligner.n_down
     iters = 0
     torch.cuda.empty_cache()
-    stft_loss = MultiResolutionSTFTLoss().to(device)
+    #stft_loss = MultiResolutionSTFTLoss().to(device)
     print('\ndecoder', optimizer.optimizers['decoder'])
     
 ############################################## TRAIN ##############################################
@@ -256,25 +256,25 @@ def main(config_path):
                                 embedding_mask_proba=0.1,
                                 num_steps=num_steps).squeeze(1)
             
-            #disc loss
-            optimizer.zero_grad()
-            d_loss = dl(wav.detach(), y_rec.detach()).mean()
-            d_loss.backward()
-            optimizer.step('msd')
-            optimizer.step('mpd')
+            # #disc loss
+            # optimizer.zero_grad()
+            # d_loss = dl(wav.detach(), y_rec.detach()).mean()
+            # d_loss.backward()
+            # optimizer.step('msd')
+            # optimizer.step('mpd')
 
             #gen loss
             optimizer.zero_grad()
-            mel_loss = stft_loss(y_rec, wav)
-            gen_loss = gl(wav, y_rec).mean()
+            #mel_loss = stft_loss(y_rec, wav)
+            #gen_loss = gl(wav, y_rec).mean()
             loss_diff = model.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2)).mean() # EDM loss
             loss_sty = F.l1_loss(s_preds, s.detach()) # style reconstruction loss
-            g_loss = loss_params.lambda_mel * mel_loss    +\
-                     loss_params.lambda_gen * gen_loss    +\
-                     loss_params.lambda_diff* loss_diff   +\
-                     loss_params.lambda_sty * loss_sty
+            g_loss = loss_params.lambda_diff* loss_diff   +\
+                     loss_params.lambda_sty * loss_sty    #+\
+                     #loss_params.lambda_mel * mel_loss    +\
+                     #loss_params.lambda_gen * gen_loss 
             g_loss.backward()
-            optimizer.step('style_encoder')
+            #optimizer.step('style_encoder')
             optimizer.step('diffusion')
 
             iters = iters + 1
@@ -284,20 +284,20 @@ def main(config_path):
                     f'Epoch [{epoch+1}/{epochs}], '
                     f'Step [{i+1}/{len(train_list)//batch_size}], '
                     f'Diff Loss: {loss_diff:.5f}, '
-                    f'Sty Loss: {loss_sty:.5f}, '
-                    f'Disc Loss: {d_loss:.5f}'
+                    f'Sty Loss: {loss_sty:.5f}'
+                    #f'Disc Loss: {d_loss:.5f}'
                 )
 
                 writer.add_scalar('train/sty_loss', float(f"{loss_sty:.5f}"), iters)
                 writer.add_scalar('train/diff_loss', float(f"{loss_diff:.5f}"), iters)
-                writer.add_scalar('train/mel_loss', float(f"{mel_loss:.5f}"), iters)
-                writer.add_scalar('train/gen_loss', float(f"{gen_loss:.5f}"), iters)
-                writer.add_scalar('train/d_loss', float(f"{d_loss:.5f}"), iters)
+                # writer.add_scalar('train/mel_loss', float(f"{mel_loss:.5f}"), iters)
+                # writer.add_scalar('train/gen_loss', float(f"{gen_loss:.5f}"), iters)
+                # writer.add_scalar('train/d_loss', float(f"{d_loss:.5f}"), iters)
 
                 
                 print('Time elasped:', time.time()-start_time)
 
-            if iters % 100 == 0: # Save to current_model every 2000 iters
+            if iters % 2000 == 0: # Save to current_model every 2000 iters
                 state = {
                     'net':  {key: model[key].state_dict() for key in model}, 
                     'optimizer': optimizer.state_dict(),
