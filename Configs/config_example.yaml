@@ -77,6 +77,18 @@ model_params:
       # num_layers: 8
       # gen_istft_n_fft: 1200
       # gen_istft_hop_size: 300
+  diffusion:
+      dist:
+          estimate_sigma_data: true
+          mean: -3.0
+          sigma_data: 0.19926648961191362
+          std: 1.0
+      embedding_mask_proba: 0.1
+      transformer:
+          head_features: 64
+          multiplier: 2
+          num_heads: 8
+          num_layers: 3
   
 loss_params:
     lambda_mel: 5. # mel reconstruction loss

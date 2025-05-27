@@ -19,10 +19,6 @@ from models import *
 from losses import *
 from utils import *
 
-from Modules.diffusion.modules import Transformer1d, StyleTransformer1d
-from Modules.diffusion.diffusion import AudioDiffusionConditional
-from Modules.diffusion.sampler import DiffusionSampler, ADPM2Sampler, KarrasSchedule, KDiffusion, LogNormalDistribution
-
 from optimizers import build_optimizer
 
 class MyDataParallel(torch.nn.DataParallel):
@@ -85,8 +81,9 @@ def main(config_path):
         print(f"\nERROR: Cannot find {e} in config file!\nYour config file is likely outdated, please download updated version from the repository.")
         raise SystemExit(1)
     
+    loss_params = Munch(config['loss_params'])
     optimizer_params = Munch(config['optimizer_params'])
-    
+
     train_list, _ = get_data_path_list(train_path, train_path)
     device = 'cuda'
 
@@ -103,7 +100,19 @@ def main(config_path):
     # build model
     model_params = recursive_munch(config['model_params'])
     model_params['n_token'] = n_token
-    model = build_model(model_params)
+    #model = build_model(model_params)
+    enabled_modules = [
+      "decoder",
+      "predictor",
+      "text_encoder",
+      "style_encoder",
+      "text_aligner",
+      "pitch_extractor",
+      "mpd",
+      "msd",
+      'diffusion'
+    ]
+    model = build_model_custom(model_params, enabled_modules)
     _ = [model[key].to(device) for key in model]
 
     # DP
@@ -116,51 +125,18 @@ def main(config_path):
 
     load_pretrained = config.get('pretrained_model', '') != ''
 
-    # DEFINE DIFFUSION MODEL
-    
-    diffusion_params = {
-        "dist": {"estimate_sigma_data": True, "mean": -3.0, "sigma_data": 0.19926648961191362, "std": 1.0},
-        "transformer": { "head_features": 64, "multiplier": 2, "num_heads": 8, "num_layers": 3 },
-        "embedding_mask_proba": 0.1
-    }
-    style_dim = config['model_params']['style_dim']
-    hidden_dim = config['model_params']['hidden_dim']
-    transformer = Transformer1d(channels=style_dim, 
-                                    context_embedding_features=hidden_dim,
-                                    **diffusion_params['transformer'])
-    # transformer = StyleTransformer1d(channels=style_dim, 
-    #                                 context_embedding_features=hidden_dim,
-    #                                 context_features=style_dim, 
-    #                                 **diffusion_params['transformer'])
-    
-    model_diffusion = AudioDiffusionConditional(
-        in_channels=1,
-        embedding_max_length=512,
-        embedding_features=hidden_dim,
-        embedding_mask_proba=diffusion_params["embedding_mask_proba"], # Conditional dropout of batch elements,
-        channels=style_dim,
-        #context_features=style_dim,
-    )
-    
-    model_diffusion.diffusion = KDiffusion(
-        net=model_diffusion.unet,
-        sigma_distribution=LogNormalDistribution(mean = diffusion_params["dist"]["mean"], std = diffusion_params["dist"]["std"]),
-        sigma_data=diffusion_params["dist"]["sigma_data"], # a placeholder, will be changed dynamically when start training diffusion model
-        dynamic_threshold=0.0 
-    )
-    model_diffusion.diffusion.net = transformer
-    model_diffusion.unet = transformer
+    gl = GeneratorLoss(model.mpd, model.msd).to(device)
+    dl = DiscriminatorLoss(model.mpd, model.msd).to(device)
+
+    gl = MyDataParallel(gl)
+    dl = MyDataParallel(dl)
 
     sampler = DiffusionSampler(
-        model_diffusion.diffusion,
+        model.diffusion.diffusion,
         sampler=ADPM2Sampler(),
         sigma_schedule=KarrasSchedule(sigma_min=0.0001, sigma_max=3.0, rho=9.0), # empirical parameters
         clamp=False
     )
-
-    model_diffusion = MyDataParallel(model_diffusion) 
-
-    # END DIFFUSION
     
     scheduler_params = {
         "max_lr": optimizer_params.lr,
@@ -169,11 +145,21 @@ def main(config_path):
         "steps_per_epoch": len(train_dataloader),
     }
 
-    scheduler_params_dict= {"diffusion": scheduler_params.copy()}
+    scheduler_params_dict= {key: scheduler_params.copy() for key in model}
+    scheduler_params_dict['decoder']['max_lr'] = optimizer_params.ft_lr * 2
+    scheduler_params_dict['style_encoder']['max_lr'] = optimizer_params.ft_lr * 2
     
-    diffusion_optimizer = build_optimizer({'diffusion': model_diffusion.parameters()},
-                                        scheduler_params_dict=scheduler_params_dict, lr=optimizer_params.lr)
+    optimizer = build_optimizer({key: model[key].parameters() for key in model},
+                                          scheduler_params_dict=scheduler_params_dict, lr=optimizer_params.lr)
         
+    # adjust acoustic module learning rate
+    for module in ["decoder", "style_encoder"]:
+        for g in optimizer.optimizers[module].param_groups:
+            g['betas'] = (0.0, 0.99)
+            g['lr'] = optimizer_params.ft_lr
+            g['initial_lr'] = optimizer_params.ft_lr
+            g['min_lr'] = 0
+            g['weight_decay'] = 1e-4
         
     # load models if there is a model
     if load_pretrained:
@@ -186,63 +172,82 @@ def main(config_path):
             training_strats['ignore_modules'] = ''
             training_strats['freeze_modules'] = ''
 
-        model, _, start_epoch, iters = load_checkpoint(model,  None, 
-                                                        config['pretrained_model'], 
-                                                        load_only_params= True,
-                                                        ignore_modules=training_strats['ignore_modules'],
-                                                        freeze_modules=training_strats['freeze_modules'])
+        model, optimizer, start_epoch, iters = load_checkpoint(model,  optimizer, 
+                                                               config['pretrained_model'], 
+                                                               load_only_params=config.get('load_only_params', True),
+                                                               ignore_modules=training_strats['ignore_modules'],
+                                                               freeze_modules=training_strats['freeze_modules'])
     else:
             raise Exception('Must have a pretrained!')
-    
-    # check in the same dir exist diffusion checkpoint
-    from pathlib import Path
-    parent_dir = Path(config['pretrained_model']).parent
-    diff_model_path = parent_dir / "current_diffusion.pth"
-
-    if diff_model_path.is_file():
-        print("\nFound 'current_diffusion.pth'.")
-        print("Loading diffusion module...")
-        #workaround to use load_checkpoint
-        model_diffusion, diffusion_optimizer, start_epoch, iters = load_checkpoint({'diffusion': model_diffusion},  diffusion_optimizer, 
-                                                        diff_model_path, 
-                                                        load_only_params= False,
-                                                        ignore_modules=training_strats['ignore_modules'],
-                                                        freeze_modules=training_strats['freeze_modules'])
-        model_diffusion = model_diffusion['diffusion']
-    else:
-        print("'current_diffusion.pth' not found! Initializing a new one...")
-        
         
     n_down = model.text_aligner.n_down
-
     iters = 0
-    
     torch.cuda.empty_cache()
-    
-    print('\diffusion', diffusion_optimizer.optimizers['diffusion'])
+    stft_loss = MultiResolutionSTFTLoss().to(device)
+    print('\ndecoder', optimizer.optimizers['decoder'])
     
 ############################################## TRAIN ##############################################
-    model.predictor.train()
-    model_diffusion.train()
 
     for epoch in range(start_epoch, epochs):
         start_time = time.time()
 
         _ = [model[key].eval() for key in model]
 
+        model.msd.train()
+        model.mpd.train()
+        model.diffusion.train()
+
         for i, batch in enumerate(train_dataloader):
             waves = batch[0]
             batch = [b.to(device) for b in batch[1:]]
             texts, input_lengths, mels, mel_input_length = batch
+            
             with torch.no_grad():
                 mask = length_to_mask(mel_input_length // (2 ** n_down)).to(device)
                 text_mask = length_to_mask(input_lengths).to(texts.device)
+            try:
+                ppgs, s2s_pred, s2s_attn = model.text_aligner(mels, mask, texts)
+                s2s_attn = s2s_attn.transpose(-1, -2)
+                s2s_attn = s2s_attn[..., 1:]
+                s2s_attn = s2s_attn.transpose(-1, -2)
+            except:
+                continue
 
+            mask_ST = mask_from_lens(s2s_attn, input_lengths, mel_input_length // (2 ** n_down))
+            s2s_attn_mono = maximum_path(s2s_attn, mask_ST)
+        
             # encode
             t_en = model.text_encoder(texts, input_lengths, text_mask)
 
-            # compute the style of the entire utterance
-            s = model.style_encoder(mels.unsqueeze(1))
+            asr = (t_en @ s2s_attn_mono)
+
+            # cut
+            mel_len = min(int(mel_input_length.min().item() / 2 - 1), max_len // 2)
+            en = []
+            gt = []
+            wav = []
+            for bib in range(len(mel_input_length)):
+                mel_length = int(mel_input_length[bib].item() / 2)
+
+                random_start = np.random.randint(0, mel_length - mel_len)
+                en.append(asr[bib, :, random_start:random_start+mel_len])
+                gt.append(mels[bib, :, (random_start * 2):((random_start+mel_len) * 2)])
+                
+                y = waves[bib][(random_start * 2) * 300:((random_start+mel_len) * 2) * 300]
+                wav.append(torch.from_numpy(y).to(device))
+            en = torch.stack(en)
+            gt = torch.stack(gt).detach()
+            wav = torch.stack(wav).float().detach()
+
+            # prosody
+            with torch.no_grad():
+                F0_real, _, _ = model.pitch_extractor(gt.unsqueeze(1))
+                N_real = log_norm(gt.unsqueeze(1)).squeeze(1)
+                wav = wav.unsqueeze(1)
+
+            s = model.style_encoder(gt.unsqueeze(1))
+
+            y_rec = model.decoder(en, F0_real, N_real, s)
             
             num_steps = np.random.randint(3, 5)
             s_preds = sampler(  noise = torch.randn_like(s).unsqueeze(1).to(device), 
@@ -250,42 +255,70 @@ def main(config_path):
                                 embedding_scale=1,
                                 embedding_mask_proba=0.1,
                                 num_steps=num_steps).squeeze(1)
-            loss_diff = model_diffusion.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2)).mean() # EDM loss
+            
+            #disc loss
+            optimizer.zero_grad()
+            d_loss = dl(wav.detach(), y_rec.detach()).mean()
+            d_loss.backward()
+            optimizer.step('msd')
+            optimizer.step('mpd')
+
+            #gen loss
+            optimizer.zero_grad()
+            mel_loss = stft_loss(y_rec, wav)
+            gen_loss = gl(wav, y_rec).mean()
+            loss_diff = model.diffusion(s.unsqueeze(1), embedding=t_en.transpose(-1, -2)).mean() # EDM loss
             loss_sty = F.l1_loss(s_preds, s.detach()) # style reconstruction loss
-
-            diffusion_loss =  loss_sty + loss_diff
-
-            diffusion_optimizer.zero_grad()
-            diffusion_loss.backward()
-            diffusion_optimizer.step('diffusion')
+            g_loss = loss_params.lambda_mel * mel_loss    +\
+                     loss_params.lambda_gen * gen_loss    +\
+                     loss_params.lambda_diff* loss_diff   +\
+                     loss_params.lambda_sty * loss_sty
+            g_loss.backward()
+            optimizer.step('style_encoder')
+            optimizer.step('diffusion')
 
             iters = iters + 1
     
             if (i+1)%log_interval == 0:
-                logger.info (f'Epoch [{epoch+1}/{epochs}], \
-                             Step [{i+1}/{len(train_list)//batch_size}], \
-                             Diff Loss: {loss_diff}, \
-                             Sty Loss: {loss_sty}')
-                
-                writer.add_scalar('train/sty_loss', loss_sty, iters)
-                writer.add_scalar('train/diff_loss', loss_diff, iters)
+                logger.info(
+                    f'Epoch [{epoch+1}/{epochs}], '
+                    f'Step [{i+1}/{len(train_list)//batch_size}], '
+                    f'Diff Loss: {loss_diff:.5f}, '
+                    f'Sty Loss: {loss_sty:.5f}, '
+                    f'Disc Loss: {d_loss:.5f}'
+                )
+
+                writer.add_scalar('train/sty_loss', float(f"{loss_sty:.5f}"), iters)
+                writer.add_scalar('train/diff_loss', float(f"{loss_diff:.5f}"), iters)
+                writer.add_scalar('train/mel_loss', float(f"{mel_loss:.5f}"), iters)
+                writer.add_scalar('train/gen_loss', float(f"{gen_loss:.5f}"), iters)
+                writer.add_scalar('train/d_loss', float(f"{d_loss:.5f}"), iters)
+
                 
                 print('Time elasped:', time.time()-start_time)
+
+            if iters % 100 == 0: # Save to current_model every 2000 iters
+                state = {
+                    'net':  {key: model[key].state_dict() for key in model}, 
+                    'optimizer': optimizer.state_dict(),
+                    'iters': iters,
+                    'val_loss': 0,
+                    'epoch': epoch,
+                }
+                save_path = os.path.join(log_dir, 'current_model.pth')
+                torch.save(state, save_path)  
 
         if (epoch + 1) % save_freq == 0 :
             print('Saving..')
             state = {
-                'net':  {'diffusion': model_diffusion.state_dict()}, 
-                'optimizer': diffusion_optimizer.state_dict(),
+                'net':  {key: model[key].state_dict() for key in model}, 
+                'optimizer': optimizer.state_dict(),
                 'iters': iters,
+                'val_loss': 0,
                 'epoch': epoch,
             }
-            save_path = os.path.join(log_dir, 'current_diffusion.pth')
-            torch.save(state, save_path)
-
-            save_path = os.path.join(log_dir, 'diff_epoch_%05d.pth' % epoch)
-            torch.save(state, save_path)
-
+            save_path = os.path.join(log_dir, 'epoch_%05d.pth' % epoch)
+            torch.save(state, save_path)  
 
 
 ############################################## EVAL ##############################################
