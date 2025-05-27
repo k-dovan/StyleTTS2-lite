@@ -52,6 +52,7 @@ class Preprocess:
         mel_tensor = (torch.log(1e-5 + mel_tensor.unsqueeze(0)) - mean) / std
         return mel_tensor
     def text_preprocess(self, text, n_merge=12):
+        text_norm = re.sub(r",", ".", text) #map from , to .
         text_norm = self.__text_normalize(text).split(".")#split by sentences.
         text_norm = [s.strip() for s in text_norm]
         text_norm = list(filter(lambda x: x != '', text_norm)) #filter empty index
@@ -124,11 +125,14 @@ class StyleTTS2(torch.nn.Module):
         self.predictor           = ProsodyPredictor(style_dim=args.style_dim, d_hid=args.hidden_dim, nlayers=args.n_layer, max_dur=args.max_dur, dropout=args.dropout)
         self.text_encoder        = TextEncoder(channels=args.hidden_dim, kernel_size=5, depth=args.n_layer, n_symbols=args.n_token)
         self.style_encoder       = StyleEncoder(dim_in=args.dim_in, style_dim=args.style_dim, max_conv_dim=args.hidden_dim)# acoustic style encoder
-        self.__load_models(models_path)
         
         transformer = Transformer1d(channels=args.style_dim, 
                                         context_embedding_features=args.hidden_dim,
                                         **args.diffusion.transformer)
+        # transformer = StyleTransformer1d(channels=args.style_dim, 
+        #                                 context_embedding_features=args.hidden_dim,
+        #                                 context_features=args.style_dim,
+        #                                 **args.diffusion.transformer)
         
         self.diffusion_model = AudioDiffusionConditional(
             in_channels=1,
@@ -136,7 +140,7 @@ class StyleTTS2(torch.nn.Module):
             embedding_features=args.hidden_dim,
             embedding_mask_proba=args.diffusion.embedding_mask_proba, # Conditional dropout of batch elements,
             channels=args.style_dim,
-            #context_features=style_dim,
+            #context_features=args.style_dim,
         )
         
         self.diffusion_model.diffusion = KDiffusion(
@@ -153,6 +157,8 @@ class StyleTTS2(torch.nn.Module):
             sigma_schedule=KarrasSchedule(sigma_min=0.0001, sigma_max=3.0, rho=9.0), # empirical parameters
             clamp=False
         )
+        self.cache_s_prosody = None
+        self.__load_models(models_path)
         
     
     def __recursive_munch(self, d):
@@ -181,7 +187,7 @@ class StyleTTS2(torch.nn.Module):
         
     def __load_models(self, models_path):
         module_params = []
-        model = {'decoder':self.decoder, 'predictor':self.predictor, 'text_encoder':self.text_encoder, 'style_encoder':self.style_encoder}
+        model = {'decoder':self.decoder, 'predictor':self.predictor, 'text_encoder':self.text_encoder, 'style_encoder':self.style_encoder, 'diffusion':self.diffusion_model}
 
         params_whole = torch.load(models_path, map_location='cpu')
         params = params_whole['net']
@@ -269,28 +275,41 @@ class StyleTTS2(torch.nn.Module):
 
             # encode
             t_en = self.text_encoder(tokens, input_lengths, text_mask)
+            s = ref_s.to(device)
 
             if use_diffusion:
-                s = self.sampler(  noise = torch.randn_like(ref_s).unsqueeze(1).to(device), 
-                                embedding=t_en.transpose(-1, -2),
-                                embedding_scale=embedding_scale,
-                                embedding_mask_proba=0.1,
-                                num_steps=steps).squeeze(1)
+                if self.cache_s_prosody is None:
+                    s_prosody = self.sampler(  noise = torch.randn_like(s).unsqueeze(1).to(device), 
+                                    embedding=t_en.transpose(-1, -2),
+                                    embedding_scale=embedding_scale,
+                                    # features=s,
+                                    embedding_mask_proba=0.1,
+                                    num_steps=steps).squeeze(1)
+                    self.cache_s_prosody = s_prosody
+                else:
+                    s_prosody = self.sampler(  noise = torch.randn_like(s).unsqueeze(1).to(device), 
+                                    embedding=t_en.transpose(-1, -2),
+                                    embedding_scale=embedding_scale,
+                                    # features=s,
+                                    embedding_mask_proba=0.1,
+                                    num_steps=steps).squeeze(1)
+                    s_prosody = s_prosody*0.6 + self.cache_s_prosody*0.4
+                    self.cache_s_prosody = s_prosody
             else:
-                s = ref_s.to(device)
+                s_prosody = ref_s.to(device)
         
             # cal alignment
-            d = self.predictor.text_encoder(t_en, s, input_lengths, text_mask)
+            d = self.predictor.text_encoder(t_en, s_prosody, input_lengths, text_mask)
             x, _ = self.predictor.lstm(d)
             duration = self.predictor.duration_proj(x)
             duration = torch.sigmoid(duration).sum(axis=-1)
 
-            if prev_d_mean != 0:#Stabilize speaking speed between splits
-                dur_stats = torch.empty(duration.shape).normal_(mean=prev_d_mean, std=duration.std()).to(device)
-            else:
-                dur_stats = torch.empty(duration.shape).normal_(mean=duration.mean(), std=duration.std()).to(device)
-            duration = duration*(1-t) + dur_stats*t
-            duration[:,1:-2] = self.__replace_outliers_zscore(duration[:,1:-2]) #Normalize outlier
+            # if prev_d_mean != 0:#Stabilize speaking speed between splits
+            #     dur_stats = torch.empty(duration.shape).normal_(mean=prev_d_mean, std=duration.std()).to(device)
+            # else:
+            #     dur_stats = torch.empty(duration.shape).normal_(mean=duration.mean(), std=duration.std()).to(device)
+            # duration = duration*(1-t) + dur_stats*t
+            # duration[:,1:-2] = self.__replace_outliers_zscore(duration[:,1:-2]) #Normalize outlier
             
             duration /= speed
 
@@ -304,7 +323,7 @@ class StyleTTS2(torch.nn.Module):
 
             # encode prosody
             en = (d.transpose(-1, -2) @ alignment)
-            F0_pred, N_pred = self.predictor.F0Ntrain(en, s)
+            F0_pred, N_pred = self.predictor.F0Ntrain(en, s_prosody)
             asr = (t_en @ pred_aln_trg.unsqueeze(0).to(device))
 
             out = self.decoder(asr, F0_pred, N_pred, s)
