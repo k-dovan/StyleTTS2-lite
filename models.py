@@ -7,6 +7,10 @@ from Modules.ASR.models import ASRCNN
 from Modules.JDC.model import JDCNet
 from Modules.discriminators import MultiPeriodDiscriminator, MultiResSpecDiscriminator
 
+from Modules.diffusion.modules import Transformer1d, StyleTransformer1d
+from Modules.diffusion.diffusion import AudioDiffusionConditional
+from Modules.diffusion.sampler import DiffusionSampler, ADPM2Sampler, KarrasSchedule, KDiffusion, LogNormalDistribution
+
 import math
 from munch import Munch
 
@@ -575,16 +579,122 @@ def build_model(args):
     
     return nets
 
+def build_model_custom(args, enabled_modules):
+    assert args.decoder.type in ['istftnet', 'hifigan', 'vocos'], 'Decoder type unknown'
+    modules = {}
+    
+    if args.decoder.type == "istftnet":
+        from Modules.istftnet import Decoder
+        decoder = Decoder(dim_in=args.hidden_dim, style_dim=args.style_dim, dim_out=args.n_mels,
+                resblock_kernel_sizes = args.decoder.resblock_kernel_sizes,
+                upsample_rates = args.decoder.upsample_rates,
+                upsample_initial_channel=args.decoder.upsample_initial_channel,
+                resblock_dilation_sizes=args.decoder.resblock_dilation_sizes,
+                upsample_kernel_sizes=args.decoder.upsample_kernel_sizes, 
+                gen_istft_n_fft=args.decoder.gen_istft_n_fft, gen_istft_hop_size=args.decoder.gen_istft_hop_size) 
+    elif args.decoder.type == "hifigan":
+        from Modules.hifigan import Decoder
+        decoder = Decoder(dim_in=args.hidden_dim, style_dim=args.style_dim, dim_out=args.n_mels,
+                resblock_kernel_sizes = args.decoder.resblock_kernel_sizes,
+                upsample_rates = args.decoder.upsample_rates,
+                upsample_initial_channel=args.decoder.upsample_initial_channel,
+                resblock_dilation_sizes=args.decoder.resblock_dilation_sizes,
+                upsample_kernel_sizes=args.decoder.upsample_kernel_sizes) 
+    elif args.decoder.type == "vocos":
+        from Modules.vocos import Decoder
+        decoder = Decoder(dim_in=args.hidden_dim, style_dim=args.style_dim, dim_out=args.n_mels,
+                intermediate_dim=args.decoder.intermediate_dim,
+                num_layers=args.decoder.num_layers,
+                gen_istft_n_fft=args.decoder.gen_istft_n_fft,
+                gen_istft_hop_size=args.decoder.gen_istft_hop_size)
+    modules['decoder'] = decoder
+        
+    if 'predictor' in enabled_modules:
+        modules['predictor'] = ProsodyPredictor(
+            style_dim=args.style_dim, d_hid=args.hidden_dim, nlayers=args.n_layer,
+            max_dur=args.max_dur, dropout=args.dropout
+        )
+
+    if 'text_encoder' in enabled_modules:
+        modules['text_encoder'] = TextEncoder(
+            channels=args.hidden_dim, kernel_size=5, depth=args.n_layer, n_symbols=args.n_token
+        )
+
+    if 'style_encoder' in enabled_modules:
+        modules['style_encoder'] = StyleEncoder(
+            dim_in=args.dim_in, style_dim=args.style_dim, max_conv_dim=args.hidden_dim
+        )
+
+    if 'text_aligner' in enabled_modules:
+        modules['text_aligner'] = ASRCNN(
+            input_dim=args.ASR_params.input_dim,
+            hidden_dim=args.ASR_params.hidden_dim,
+            n_token=args.n_token,
+            n_layers=args.ASR_params.n_layers,
+            token_embedding_dim=args.ASR_params.token_embedding_dim
+        )
+
+    if 'pitch_extractor' in enabled_modules:
+        modules['pitch_extractor'] = JDCNet(
+            num_class=args.JDC_params.num_class,
+            seq_len=args.JDC_params.seq_len
+        )
+
+    if 'mpd' in enabled_modules:
+        modules['mpd'] = MultiPeriodDiscriminator()
+
+    if 'msd' in enabled_modules:
+        modules['msd'] = MultiResSpecDiscriminator()
+
+    if 'diffusion' in enabled_modules:
+        transformer = Transformer1d(channels=args.style_dim, 
+                                        context_embedding_features=args.hidden_dim,
+                                        **args.diffusion.transformer)
+        
+        # transformer = StyleTransformer1d(channels=style_dim, 
+        #                                 context_embedding_features=hidden_dim,
+        #                                 context_features=style_dim, 
+        #                                 **diffusion_params['transformer'])
+        
+        model_diffusion = AudioDiffusionConditional(
+            in_channels=1,
+            embedding_max_length=512,
+            embedding_features=args.hidden_dim,
+            embedding_mask_proba=args.diffusion.embedding_mask_proba, # Conditional dropout of batch elements,
+            channels=args.style_dim,
+            #context_features=style_dim,
+        )
+        
+        model_diffusion.diffusion = KDiffusion(
+            net=model_diffusion.unet,
+            sigma_distribution=LogNormalDistribution(mean = args.diffusion.dist.mean, std = args.diffusion.dist.std),
+            sigma_data=args.diffusion.dist.sigma_data, # a placeholder, will be changed dynamically when start training diffusion model
+            dynamic_threshold=0.0 
+        )
+        model_diffusion.diffusion.net = transformer
+        model_diffusion.unet = transformer
+
+        modules['diffusion'] = model_diffusion
+
+    # Wrap it into a Munch
+    nets = Munch(**modules)
+    
+    return nets
+
 def load_checkpoint(model, optimizer, path, load_only_params=True, ignore_modules=[], freeze_modules=[]):
     print("\n")
     state = torch.load(path, map_location='cpu')
     params = state['net']
 
     for key in model:
-        loaded_keys = list(params[key].keys())
-        loaded_has_module = loaded_keys[0].startswith('module.')
-        model_keys = list(model[key].state_dict().keys())
-        model_has_module = model_keys[0].startswith('module.')
+        try:
+            loaded_keys = list(params[key].keys())
+            loaded_has_module = loaded_keys[0].startswith('module.')
+            model_keys = list(model[key].state_dict().keys())
+            model_has_module = model_keys[0].startswith('module.')
+        except Exception as e:
+            print(f"Error:{e}. Skipping key '{key}' from checkpoint.")
+            continue
 
         if key in params and key not in ignore_modules:
             try:
