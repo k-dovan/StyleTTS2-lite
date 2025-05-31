@@ -20,6 +20,8 @@ from demucs.apply import apply_model
 import shutil
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
+from uuid import uuid4
+from tqdm import tqdm
 
 pipeline = Pipeline.from_pretrained("pyannote/voice-activity-detection")
 
@@ -169,7 +171,7 @@ def process_audio_directory(raw_dir, output_dir, min_score=0, source="vocals"):
     cleaned_paths = []
     stat_data = []
     
-    for audio_file in audio_files:
+    for audio_file in tqdm(audio_files, "Preprocess audios"):
         input_path = os.path.join(raw_dir, audio_file)
         output_path = os.path.join(output_dir, audio_file)
         
@@ -202,8 +204,8 @@ def process_audio_directory(raw_dir, output_dir, min_score=0, source="vocals"):
             print(f"Error processing {audio_file}: {e}")
             stat_data.append((audio_file, input_path, False))
     
-    # Write preprocess.csv
-    preprocessed_metadata = os.path.join(output_dir, "preprocess.csv")
+    # Write csv
+    preprocessed_metadata = os.path.join(output_dir, f"{str(uuid4())}.csv")
     with open(preprocessed_metadata, 'w', newline='') as f:
         writer = csv.writer(f)
         # Write header
@@ -212,13 +214,13 @@ def process_audio_directory(raw_dir, output_dir, min_score=0, source="vocals"):
         for filename, input_path, is_speech in stat_data:
             writer.writerow([filename, input_path, "Yes" if is_speech else "No"])
     
-    print(f"\nQuality scores written to {preprocessed_metadata}")
+    print(f"\nMetadata written to {preprocessed_metadata}")
     return cleaned_paths, stat_data
 
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Clean audio files containing speech using Demucs source separation, after detecting speech with YAMNet, and rank based on quality.")
-    parser.add_argument("--raw_dir", default='data_processing/raw_audio', help="Directory containing raw audio files")
+    parser.add_argument("--raw_dir", default='~/data/VietSpeech/raw_audio', help="Directory containing raw audio files")
     parser.add_argument("--output_dir", default='data_processing/cleaned_audio', help="Directory to save cleaned audio files")
     args = parser.parse_args()
     
