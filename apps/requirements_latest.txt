@@ -179,7 +179,7 @@ tqdm==4.67.1
 trainer==0.0.36
 transformers==4.49.0
 triton==3.2.0
-TTS @ file:///mnt/finetune/MLCore-TTS/cores/vixtts
+TTS @ file:///home/ubuntu/MLCore-TTS/cores/vixtts
 typeguard==4.4.2
 typer==0.15.2
 typing-inspection==0.4.0
