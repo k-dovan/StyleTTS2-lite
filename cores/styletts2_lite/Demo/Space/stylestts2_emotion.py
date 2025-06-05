@@ -6,6 +6,7 @@ import torch
 import traceback
 import random
 import numpy as np
+from huggingface_hub import hf_hub_download
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -35,9 +36,18 @@ def get_phoneme(text, lang):
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from inference import StyleTTS2
 
+def is_running_on_space():
+    return "SPACE_ID" in os.environ
+
 # Paths
-config_path = os.path.abspath(os.path.join("Configs", "config.yaml"))
-models_path = os.path.abspath(os.path.join("Models", "base_model.pth"))
+if is_running_on_space():
+    repo_id = "VietDevelopers-TTS/styletts2"
+    config_path = hf_hub_download(repo_id, "config.yaml")
+    model_path = hf_hub_download(repo_id, "model.pth")
+else:    
+    config_path = os.path.abspath(os.path.join("Configs", "config.yaml"))
+    models_path = os.path.abspath(os.path.join("Models", "model.pth"))
+
 emotion_voice_path = os.path.join("Demo", "Audio", "emotions")
 
 # Emotion reference voices
@@ -84,7 +94,7 @@ def main(text_prompt, speed, denoise, avg_style, stabilize, emotion):
         }
 
         with torch.no_grad():
-            phonemes = get_phoneme(text=text_prompt, lang="en-us")
+            phonemes = get_phoneme(text=text_prompt, lang="vi")
             styles = model.get_styles(speaker, denoise, avg_style)
             audio = model.generate(phonemes, styles, stabilize, 18)
             audio = audio / np.max(np.abs(audio))  # Normalize
