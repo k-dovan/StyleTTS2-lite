@@ -12,3 +12,5 @@ cleaned_audio/
 processed/
 samples/
 *.onnx
+*.wav
+*.pth
